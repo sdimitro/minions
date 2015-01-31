@@ -20,7 +20,7 @@ int main (int argc, char *argv[]) {
 		for(i = 0; i < MAX_OPTIONS ; i++) {
 				retval = sysconf(i);
 
-				if (retval == -1 && errno == 0) {
+				if (retval == -1) {
 					if (errno == 0)
 						printf("unlimited\n");
 				} else {
