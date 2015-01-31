@@ -18,28 +18,27 @@ int main (int argc, char *argv[]) {
 	if (argc < 2) {
 
 		for(i = 0; i < MAX_OPTIONS ; i++) {
-				retval = sysconf(i);
+			retval = sysconf(i);
 
-				if (retval == -1) {
-					if (errno == 0)
-						printf("%d unlimited\n", i);
-				} else {
-					printf("%d %ld\n", i, retval);
-				}
+			if (retval == -1) {
+				if (errno == 0)
+					printf("%d unlimited\n", i);
+			} else {
+				printf("%d %ld\n", i, retval);
+			}
 		}
-
 	} else {
 		for (i = 1; i < argc; i++) {
-				retval = sysconf(atoi(argv[i]));
+			retval = sysconf(atoi(argv[i]));
 
-				if (retval == -1) {
-					if (errno == 0)
-						printf("unlimited\n");
-					else
-						printf("undefined\n");
-				} else {
-					printf("%ld\n", retval);
-				}
+			if (retval == -1) {
+				if (errno == 0)
+					printf("unlimited\n");
+				else
+					printf("undefined\n");
+			} else {
+				printf("%ld\n", retval);
+			}
 		}
 	}
 

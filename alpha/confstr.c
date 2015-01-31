@@ -19,28 +19,28 @@ int main (int argc, char *argv[]) {
 	if (argc < 2) {
 
 		for(i = 0; i < MAX_OPTIONS ; i++) {
-				retval = confstr(i, buf, BUFSIZ);
+			retval = confstr(i, buf, BUFSIZ);
 
-				if (retval == 0) {
-					if (errno == 0)
-						printf("%d invalid\n", i);
-				} else {
-					printf("%d %s\n", i, buf);
-				}
+			if (retval == 0) {
+				if (errno == 0)
+					printf("%d invalid\n", i);
+			} else {
+				printf("%d %s\n", i, buf);
+			}
 		}
 
 	} else {
 		for (i = 1; i < argc; i++) {
-				retval = confstr(atoi(argv[i]), buf, BUFSIZ);
+			retval = confstr(atoi(argv[i]), buf, BUFSIZ);
 
-				if (retval == 0) {
-					if (errno == 0)
-						printf("invalid\n");
-					else
-						printf("undefined\n");
-				} else {
-					printf("%s\n", buf);
-				}
+			if (retval == 0) {
+				if (errno == 0)
+					printf("invalid\n");
+				else
+					printf("undefined\n");
+			} else {
+				printf("%s\n", buf);
+			}
 		}
 	}
 
