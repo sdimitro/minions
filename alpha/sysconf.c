@@ -22,9 +22,9 @@ int main (int argc, char *argv[]) {
 
 				if (retval == -1) {
 					if (errno == 0)
-						printf("unlimited\n");
+						printf("%d unlimited\n", i);
 				} else {
-					printf("%ld\n", retval);
+					printf("%d %ld\n", i, retval);
 				}
 		}
 
