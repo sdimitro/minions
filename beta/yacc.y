@@ -533,3 +533,6 @@ void yyerror(const char *s)
 	fprintf(stderr, "*** %s\n", s);
 }
 
+void main() {
+    yyparse();
+}
