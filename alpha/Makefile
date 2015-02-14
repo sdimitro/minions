@@ -15,4 +15,4 @@ chutime: chutime.c
 	gcc chutime.c -o chutime
 
 clean:
-	rm sysconf pathconf confstr chutime
+	rm -f sysconf pathconf confstr chutime
