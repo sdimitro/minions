@@ -35,3 +35,7 @@
 		(stack-pop x) => 32
 		(x 'bt) => '(23)
 		(x 'top) => 23)))
+
+(facts "About make-new-machine")
+
+(facts "About assemble")

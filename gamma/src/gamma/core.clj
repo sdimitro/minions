@@ -1,5 +1,8 @@
 (ns gamma.core)
 
+; Declare the helper functions here
+(declare for-each)
+
 ;
 ; REGISTERS
 ;
@@ -14,10 +17,12 @@
 						:else (print "Unknown request -- REGISTER" message))))
 	dispatch)
 
-(defn get-contents [register]
+(defn get-contents
+	[register]
   (register 'get))
 
-(defn set-contents! [register value]
+(defn set-contents!
+	[register value]
   ((register 'set) value))
 
 ;
@@ -48,11 +53,26 @@
             :else (print "Unknown request -- STACK" message)))
     dispatch))
 
-(defn stack-pop [stack]
+(defn stack-pop
+	[stack]
 	(stack 'pop))
 
-(defn stack-push [stack value]
+(defn stack-push
+	[stack value]
 	((stack 'push) value))
+
+;
+; INSTRUCTION
+;
+
+(defn make-instruction [text]
+  (cons text '()))
+
+(defn instruction-text [inst]
+  (first inst))
+
+(defn instruction-execution-proc [inst]
+  (rest inst))
 
 ;
 ; MACHINE
@@ -84,7 +104,7 @@
       (defn lookup-register [name]
         (let [value (name @register-table)]
           (if value
-              value
+              @value
               (print "Unknown register:" name))))
 
       (defn execute []
@@ -92,7 +112,7 @@
           (if (nil? insts)
               'done
               (do
- ;               (instruction-execution-proc (first insts))
+ ;               (instruction-execution-proc (first insts)) ; FIXME
                 (execute)))))
 
       (defn dispatch [message]
@@ -116,3 +136,80 @@
               :else (print "Unknown request -- MACHINE" message)))
 
       dispatch)))
+
+(defn start
+	[machine]
+  (machine 'start))
+
+(defn get-register-contents
+	[machine register-name]
+  (get-contents
+		((machine 'get-register) register-name)))
+
+(defn set-register-contents!
+	[machine register-name value]
+  (set-contents!
+		((machine 'get-register) register-name)
+		value)
+  'done)
+
+;
+; ASSEMBLER
+;
+
+
+
+; (defn update-insts! [insts labels machine]
+;   (let [pc (get-register-contents machine :pc)
+;         flag (get-register-contents machine :flag)
+;         stack (machine 'stack)
+;         ops (machine 'operations)]
+;     (for-each
+;      (fn [inst]
+;        (set-instruction-execution-proc! 
+;         	inst
+;         	(make-execution-procedure
+;          			(instruction-text inst)
+; 							labels
+; 							machine
+;          			pc flag stack ops)))
+;      insts)))
+; 
+; (defn extract-labels
+; 	[text receive]
+;   (if (nil? text)
+;       (receive '() '())
+;       (extract-labels
+; 				(rest text)
+;     	  (fn [insts labels]
+;     	     (let [next-inst (first text)]
+;     	       (if (symbol? next-inst)
+;     	           (receive
+; 										insts
+;     	              (cons
+; 											(make-label-entry next-inst insts)
+;     	                labels))
+;     	           (receive
+; 										(cons
+; 											(make-instruction next-inst)
+;     	                insts)
+;     	              labels)))))))
+; 
+; (defn assemble
+; 	[controller-text machine]
+;   (extract-labels
+; 		controller-text
+;     (fn [insts labels]
+;       (update-insts! insts labels machine) insts)))
+
+;
+; HELPER FUNCTIONS
+;
+
+; I think doseq does the exact same
+; thing that for-each does in Scheme
+; for now that works though
+(defn for-each [f l]
+  (cond (empty? l) nil
+        :else (do (f (first l)) 
+                  (recur f (rest l)))))
