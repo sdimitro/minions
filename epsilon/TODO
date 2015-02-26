@@ -1,0 +1,4 @@
+- Resolve the circular dependency with machine and assembler
+- Resolve mcar, mcons issue
+- Write tests
+- Finish in file TODOs
