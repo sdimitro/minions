@@ -26,4 +26,8 @@ if len(sys.argv) == 3:
 	date2 = D(yr, mo, dy)
 
 
-print (date2 - date1)
+datediff = (date2 - date1)
+
+days = datediff.days
+print(days)
+
