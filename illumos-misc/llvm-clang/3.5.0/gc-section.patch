@@ -1,0 +1,14 @@
+diff -rupN llvm.original/Makefile.rules llvm/Makefile.rules
+--- llvm.original/Makefile.rules	2014-12-21 09:27:34.059412421 +0000
++++ llvm/Makefile.rules	2014-12-21 09:29:20.575577173 +0000
+@@ -638,10 +638,6 @@ endif
+ ifndef NO_DEAD_STRIP
+   ifeq ($(HOST_OS),Darwin)
+     LD.Flags += -Wl,-dead_strip
+-  else
+-    ifneq ($(HOST_OS), $(filter $(HOST_OS), Cygwin MingW))
+-      LD.Flags += -Wl,--gc-sections
+-    endif
+   endif
+ endif
+ 

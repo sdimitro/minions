@@ -1,0 +1,1 @@
+export LLVM_LIB_SEARCH_PATH=/usr/gcc/4.8/lib:/usr/lib:/lib:/usr/gnu/lib

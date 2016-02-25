@@ -1,0 +1,68 @@
+diff -rupN llvm.original/include/llvm/Support/Host.h llvm/include/llvm/Support/Host.h
+--- llvm.original/include/llvm/Support/Host.h	2014-12-21 09:27:33.886512375 +0000
++++ llvm/include/llvm/Support/Host.h	2014-12-21 09:38:45.244249491 +0000
+@@ -18,6 +18,8 @@
+ 
+ #if defined(__linux__) || defined(__GNU__)
+ #include <endian.h>
++#elif defined(__sun)
++#include <sys/isa_defs.h>
+ #else
+ #if !defined(BYTE_ORDER) && !defined(LLVM_ON_WIN32)
+ #include <machine/endian.h>
+diff -rupN llvm.original/tools/clang/lib/Driver/Tools.cpp llvm/tools/clang/lib/Driver/Tools.cpp
+--- llvm.original/tools/clang/lib/Driver/Tools.cpp	2014-12-21 09:27:32.834657320 +0000
++++ llvm/tools/clang/lib/Driver/Tools.cpp	2014-12-21 09:44:45.793993822 +0000
+@@ -5889,7 +5889,7 @@ void solaris::Assemble::ConstructJob(Com
+   for (const auto &II : Inputs)
+     CmdArgs.push_back(II.getFilename());
+ 
+-  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
++  const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("gas"));
+   C.addCommand(new Command(JA, *this, Exec, CmdArgs));
+ }
+ 
+@@ -5899,18 +5899,19 @@ void solaris::Link::ConstructJob(Compila
+                                   const ArgList &Args,
+                                   const char *LinkingOutput) const {
+   // FIXME: Find a real GCC, don't hard-code versions here
+-  std::string GCCLibPath = "/usr/gcc/4.5/lib/gcc/";
++  std::string GCCLibPath = "/usr/gcc/4.8/lib/gcc/";
+   const llvm::Triple &T = getToolChain().getTriple();
+   std::string LibPath = "/usr/lib/";
+   llvm::Triple::ArchType Arch = T.getArch();
++  std::string SUNld="/usr/ccs/bin/ld";
+   switch (Arch) {
+   case llvm::Triple::x86:
+     GCCLibPath +=
+-        ("i386-" + T.getVendorName() + "-" + T.getOSName()).str() + "/4.5.2/";
++        ("i386-" + T.getVendorName() + "-" + T.getOSName()).str() + "/4.8.3/";
+     break;
+   case llvm::Triple::x86_64:
+     GCCLibPath += ("i386-" + T.getVendorName() + "-" + T.getOSName()).str();
+-    GCCLibPath += "/4.5.2/amd64/";
++    GCCLibPath += "/4.8.3/amd64/";
+     LibPath += "amd64/";
+     break;
+   default:
+@@ -5994,7 +5995,7 @@ void solaris::Link::ConstructJob(Compila
+   addProfileRT(getToolChain(), Args, CmdArgs);
+ 
+   const char *Exec =
+-    Args.MakeArgString(getToolChain().GetLinkerPath());
++    Args.MakeArgString(SUNld);
+   C.addCommand(new Command(JA, *this, Exec, CmdArgs));
+ }
+ 
+diff -rupN llvm.original/tools/clang/lib/Frontend/InitHeaderSearch.cpp llvm/tools/clang/lib/Frontend/InitHeaderSearch.cpp
+--- llvm.original/tools/clang/lib/Frontend/InitHeaderSearch.cpp	2014-12-21 09:27:32.901959698 +0000
++++ llvm/tools/clang/lib/Frontend/InitHeaderSearch.cpp	2014-12-21 09:37:48.686315843 +0000
+@@ -443,7 +443,7 @@ AddDefaultCPlusPlusIncludePaths(const ll
+                                 "", "", "", triple);
+     break;
+   case llvm::Triple::Solaris:
+-    AddGnuCPlusPlusIncludePaths("/usr/gcc/4.5/include/c++/4.5.2/",
++    AddGnuCPlusPlusIncludePaths("/usr/gcc/4.5/include/c++/4.8.3/",
+                                 "i386-pc-solaris2.11", "", "", triple);
+     // Solaris - Fall though..
+   case llvm::Triple::AuroraUX:

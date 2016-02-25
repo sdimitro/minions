@@ -1,0 +1,219 @@
+sdimitro@Builder:~/build$ gmake check-all
+llvm[0]: Running test suite
+gmake[1]: Entering directory `/home/sdimitro/build/test'
+Making LLVM 'lit.site.cfg' file...
+Making LLVM unittest 'lit.site.cfg' file...
+gmake -C /home/sdimitro/build/test/../tools/clang/test lit.site.cfg Unit/lit.site.cfg
+gmake[2]: Entering directory `/home/sdimitro/build/tools/clang/test'
+Making Clang 'lit.site.cfg' file...
+Making Clang 'Unit/lit.site.cfg' file...
+gmake[2]: Leaving directory `/home/sdimitro/build/tools/clang/test'
+( ulimit -t 600 ; ulimit -d 512000 ; ulimit -v 512000 ; \
+  /usr/bin/python /home/sdimitro/llvm/utils/lit/lit.py -s -v . /home/sdimitro/build/test/../tools/clang/test )
+lit.py: lit.cfg:201: note: using clang: '/home/sdimitro/build/Release+Asserts/bin/clang'
+lit.py: lit.cfg:329: note: Did not find clang-interpreter in /home/sdimitro/build/Release+Asserts/bin:/home/sdimitro/build/Release+Asserts/bin
+FAIL: Clang :: Sema/wchar.c (4991 of 18758)
+******************** TEST 'Clang :: Sema/wchar.c' FAILED ********************
+Script:
+--
+/home/sdimitro/build/Release+Asserts/bin/clang -cc1 -internal-isystem /home/sdimitro/build/Release+Asserts/bin/../lib/clang/3.5.0/include /home/sdimitr
+o/llvm/tools/clang/test/Sema/wchar.c -fsyntax-only -verify
+/home/sdimitro/build/Release+Asserts/bin/clang -cc1 -internal-isystem /home/sdimitro/build/Release+Asserts/bin/../lib/clang/3.5.0/include /home/sdimitr
+o/llvm/tools/clang/test/Sema/wchar.c -fsyntax-only -fshort-wchar -verify -DSHORT_WCHAR
+--                                                                                                                                           [167/1922]
+Exit Code: 1
+
+Command Output (stderr):
+--
+error: 'error' diagnostics expected but not seen: 
+  File /home/sdimitro/llvm/tools/clang/test/Sema/wchar.c Line 22: initializing wide char array with non-wide string literal
+error: 'error' diagnostics seen but not expected: 
+  File /home/sdimitro/llvm/tools/clang/test/Sema/wchar.c Line 20: array initializer must be an initializer list
+  File /home/sdimitro/llvm/tools/clang/test/Sema/wchar.c Line 22: array initializer must be an initializer list
+3 errors generated.
+
+--
+
+********************
+FAIL: LLVM :: CodeGen/SPARC/2008-10-10-InlineAsmMemoryOperand.ll (10794 of 18758)
+******************** TEST 'LLVM :: CodeGen/SPARC/2008-10-10-InlineAsmMemoryOperand.ll' FAILED ********************
+Script:
+--
+/home/sdimitro/build/Release+Asserts/bin/llc < /home/sdimitro/llvm/test/CodeGen/SPARC/2008-10-10-InlineAsmMemoryOperand.ll -march=sparc
+--
+Exit Code: 1
+
+Command Output (stderr):
+--
+<inline asm>:1:6: error: unexpected token
+        st %fsr, [%sp+100]
+            ^
+LLVM ERROR: Error parsing inline asm
+
+
+--
+
+********************
+FAIL: LLVM :: CodeGen/SPARC/inlineasm.ll (10819 of 18758)
+******************** TEST 'LLVM :: CodeGen/SPARC/inlineasm.ll' FAILED ********************
+Script:                                                                                                                                      [131/1922]
+--
+/home/sdimitro/build/Release+Asserts/bin/llc -march=sparc </home/sdimitro/llvm/test/CodeGen/SPARC/inlineasm.ll | /home/sdimitro/build/Release+Asserts/b
+in/FileCheck /home/sdimitro/llvm/test/CodeGen/SPARC/inlineasm.ll
+--
+Exit Code: 2
+
+Command Output (stderr):
+--
+<inline asm>:1:13: error: unexpected token
+        ldda [%o1] 43, %g2
+                   ^
+LLVM ERROR: Error parsing inline asm
+
+FileCheck error: '-' is empty.
+
+--
+
+********************
+FAIL: LLVM-Unit :: ADT/Release+Asserts/ADTTests/APIntTest.LargeAPIntConstruction (17711 of 18758)
+******************** TEST 'LLVM-Unit :: ADT/Release+Asserts/ADTTests/APIntTest.LargeAPIntConstruction' FAILED ********************
+Note: Google Test filter = APIntTest.LargeAPIntConstruction
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from APIntTest
+[ RUN      ] APIntTest.LargeAPIntConstruction
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc
+0  ADTTests 0x083b0d4c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  ADTTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848917984
+
+********************
+FAIL: LLVM-Unit :: ADT/Release+Asserts/ADTTests/APIntTest.nearestLogBase2 (17729 of 18758)
+******************** TEST 'LLVM-Unit :: ADT/Release+Asserts/ADTTests/APIntTest.nearestLogBase2' FAILED ********************
+Note: Google Test filter = APIntTest.nearestLogBase2
+[==========] Running 1 test from 1 test case.                                                                                                 [96/1922]
+[----------] Global test environment set-up.
+[----------] 1 test from APIntTest
+[ RUN      ] APIntTest.nearestLogBase2
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc
+0  ADTTests 0x083b0d4c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  ADTTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848917984
+
+********************
+FAIL: LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyNamedModuleWriteFile (18730 of 18758)
+******************** TEST 'LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyNamedModuleWriteFile' FAILED *****************
+***
+Note: Google Test filter = TestDebugIR.EmptyNamedModuleWriteFile
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TestDebugIR
+[ RUN      ] TestDebugIR.EmptyNamedModuleWriteFile
+terminate called after throwing an instance of 'std::logic_error'
+  what():  basic_string::_S_construct null not valid
+0  DebugIRTests 0x083deb5c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  DebugIRTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848730064
+
+********************
+FAIL: LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyNamedModuleWriteNamedFile (18731 of 18758)
+******************** TEST 'LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyNamedModuleWriteNamedFile' FAILED ************
+********
+Note: Google Test filter = TestDebugIR.EmptyNamedModuleWriteNamedFile
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TestDebugIR
+[ RUN      ] TestDebugIR.EmptyNamedModuleWriteNamedFile
+terminate called after throwing an instance of 'std::logic_error'
+  what():  basic_string::_S_construct null not valid
+0  DebugIRTests 0x083deb5c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  DebugIRTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848730064
+                                                                                                                                              [60/1922]
+********************
+FAIL: LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyUnnamedModuleWriteNamedFile (18732 of 18758)
+******************** TEST 'LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyUnnamedModuleWriteNamedFile' FAILED **********
+**********
+Note: Google Test filter = TestDebugIR.EmptyUnnamedModuleWriteNamedFile
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TestDebugIR
+[ RUN      ] TestDebugIR.EmptyUnnamedModuleWriteNamedFile
+Assertion failed: Str && "StringRef cannot be built from a NULL argument", file /home/sdimitro/llvm/include/llvm/ADT/StringRef.h, line 77, function Str
+ingRef
+0  DebugIRTests 0x083deb5c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  DebugIRTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848730064
+
+********************
+FAIL: LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.ExistingMetadataRetained (18733 of 18758)
+******************** TEST 'LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.ExistingMetadataRetained' FAILED ******************
+**
+Note: Google Test filter = TestDebugIR.ExistingMetadataRetained
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TestDebugIR
+[ RUN      ] TestDebugIR.ExistingMetadataRetained
+terminate called after throwing an instance of 'std::logic_error'
+  what():  basic_string::_S_construct null not valid
+0  DebugIRTests 0x083deb5c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  DebugIRTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848730064
+
+********************
+FAIL: LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyNamedModuleNoWrite (18734 of 18758)
+******************** TEST 'LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyNamedModuleNoWrite' FAILED ****************
+****
+Note: Google Test filter = TestDebugIR.NonEmptyNamedModuleNoWrite
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TestDebugIR
+[ RUN      ] TestDebugIR.NonEmptyNamedModuleNoWrite
+terminate called after throwing an instance of 'std::logic_error'
+  what():  basic_string::_S_construct null not valid
+0  DebugIRTests 0x083deb5c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  DebugIRTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848730064
+
+********************
+FAIL: LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyNamedModuleWriteFile (18735 of 18758)
+******************** TEST 'LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyNamedModuleWriteFile' FAILED **************
+******
+Note: Google Test filter = TestDebugIR.NonEmptyNamedModuleWriteFile
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TestDebugIR
+[ RUN      ] TestDebugIR.NonEmptyNamedModuleWriteFile
+terminate called after throwing an instance of 'std::logic_error'
+  what():  basic_string::_S_construct null not valid
+0  DebugIRTests 0x083deb5c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  DebugIRTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848730064
+
+********************
+FAIL: LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyUnnamedModuleWriteToNamedFile (18739 of 18758)
+******************** TEST 'LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyUnnamedModuleWriteToNamedFile' FAILED *****
+***************
+Note: Google Test filter = TestDebugIR.NonEmptyUnnamedModuleWriteToNamedFile
+[==========] Running 1 test from 1 test case.
+[----------] Global test environment set-up.
+[----------] 1 test from TestDebugIR
+[ RUN      ] TestDebugIR.NonEmptyUnnamedModuleWriteToNamedFile
+Assertion failed: Str && "StringRef cannot be built from a NULL argument", file /home/sdimitro/llvm/include/llvm/ADT/StringRef.h, line 77, function StringRef
+0  DebugIRTests 0x083deb5c llvm::sys::PrintStackTrace(__FILE*) + 44
+1  DebugIRTests 0x766f4d00 llvm::sys::PrintStackTrace(__FILE*) + 1848730064
+********************
+Testing Time: 895.30s
+********************
+Failing Tests (12):
+    Clang :: Sema/wchar.c
+    LLVM :: CodeGen/SPARC/2008-10-10-InlineAsmMemoryOperand.ll
+    LLVM :: CodeGen/SPARC/inlineasm.ll
+    LLVM-Unit :: ADT/Release+Asserts/ADTTests/APIntTest.LargeAPIntConstruction
+    LLVM-Unit :: ADT/Release+Asserts/ADTTests/APIntTest.nearestLogBase2
+    LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyNamedModuleWriteFile
+    LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyNamedModuleWriteNamedFile
+    LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.EmptyUnnamedModuleWriteNamedFile
+    LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.ExistingMetadataRetained
+    LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyNamedModuleNoWrite
+    LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyNamedModuleWriteFile
+    LLVM-Unit :: Transforms/DebugIR/Release+Asserts/DebugIRTests/TestDebugIR.NonEmptyUnnamedModuleWriteToNamedFile
+
+  Expected Passes    : 18582
+  Expected Failures  : 116
+  Unsupported Tests  : 48
+  Unexpected Failures: 12
