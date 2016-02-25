@@ -1,0 +1,8 @@
+- check the following for returning error values:
+		sem_init
+		calloc
+		free
+		sem_wait
+		sem_post
+- style
+- conditional variables instead of semaphores?
