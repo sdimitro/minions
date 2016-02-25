@@ -1,0 +1,41 @@
+Module:
+	'module' name=ID '{'
+		declarations*=Decl
+	'}'
+;
+
+Decl:
+	InputDecl | OutputDecl | FunDecl
+;
+
+FunDecl:
+	'::' fname=ID '{'
+		//declarations*=Decl
+	'}'
+;
+
+InputDecl:
+	'input' input_vars+=VarDecl[','] ';'?
+;
+
+OutputDecl:
+	'output' output_vars+=VarDecl[','] ';'?
+;
+
+VarDecl:
+  RegDecl  |
+  WireDecl |
+  ID
+;
+
+WireDecl:
+  'wire' identifier=ID
+;
+
+RegDecl:
+  'reg' identifier=ID
+;
+
+Comment:
+	/\/\/.*$/
+;
