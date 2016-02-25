@@ -1,0 +1,99 @@
+SCIF stands for Symmetric Communications InterFace)
+
+SCIF is a simple high performance interface for
+symmetric communication. It supports data-transfer
+between the coprocessor and the CPU through the PCIe
+bus. It is low-level and suitable for systems programming.
+
+Most of its API looks and acts like traditional UNIX
+sockets, while the rest of it looks like shared memory
+and mmap.
+
+Pros over offloading mode(eg. MIC & OpenMP directives):
+- Computation does not necessarily have to be transferred
+	back to to the CPU. With SCIF, different MIC cards can
+	communicate dirrectly with each other basically
+	making certain designs more efficient.
+- Frameworks that use offloading mode, do not necessarily
+	take advantage of DMA-features of the hardware.
+- Overall you get more control over the configuration
+	and the architecture of your design in order to
+	maximize performance. That's becaues you get
+	lower-level access in away.
+
+Cons over offloading mode:
+- Low-level code C is relatively more complex when
+	compared with pragma directives provided by
+	OpenMP.
+- Using SCIF implies that you must have at least
+	one application run natively on the Phi as your
+	endpoint. Setting up an application to run
+	natively on the Phi does involve a certain
+	amount of configuration.
+
+GeMTC port to the Xeon Phi: (XMTC? "no vowels?")
+- A complete port of the GeMTC architecture!
+- Comes with some minor differences of course
+	since the underlinening hardware is different.
+- The core GeMTC architecture in one shared
+	library (named it libmtcq)
+
+Differences in the core framework architecture:
+- CUDA vs C with Pthreads (pthreads are also used
+	in the underlining architecture of higher-level
+	frameworks like OpenMP)
+- The Xeon Phi does not have the hierarchical
+	architecture of SMXs and Warps there is no
+	concept of application kernels. Therefore
+	the model used is the one of master_processes
+	(which are actually threads - not that different
+	in Linux).
+- A master process takes tasks from the incoming
+	queue and if the tasks are sequential (they shouldn't
+	be!) it executes them itself. Else, if the
+	task is parallelizable it will contain
+	the number of threads that it wants to use
+	and the master_process will spawn the threads
+	to execute the application. master_process
+	are configurable.
+
+On top of the framework:
+- A client-server model that uses SCIF (finally!).
+- Since one-core out of the 61 specifically
+	runs Linux (muOS) constantly, the server
+	runs on it as a native application. Since
+	we have Linux then we can use epoll to
+	handle requests from the clients. (SCIF
+	does provide it's own scif_poll() call
+	but after using the framework for a bit
+	I realized the Windows issue*)
+
+Evaluation:
+
+Nex Few Days:
+- More evaluation and push the device
+	to its limits.
+
+Future Works:
+- the socket-like API from SCIF is limited
+	because performance degrades after messages
+	of 5~6 KBs. So we could either provide
+	support for splitting and sending of
+	multiple messages (not recommended) or
+	take advantage of the shared-memory-like
+	API that does everything through RMA.
+	(Remote Memory Access, takes advantage
+	of DMA and registered memory address*
+	and is specifically designed for big I\O
+	and bulk data-transfers)
+- Complete integration with Intel's library
+	functions
+- Swift integration so we can finally get
+	a bunch of these things work together
+	in a distributed manner.
+- Provide more flexibility in the apps that
+	are supported from the framework with
+	the ultimate goal making the
+	framework plug-n-play (It already is
+	since it works as a shared library)
+	this time for apps.

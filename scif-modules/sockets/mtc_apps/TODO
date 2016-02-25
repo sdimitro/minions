@@ -1,0 +1,11 @@
+- Refactor so matrix multiplication test files
+	reuse some code.
+- Automate compilation via Makefile
+- Common Framework for testing apps (maybe header file too)
+- Test MTC Apps
+- Automate testing via Makefile
+- Automate integration via Makefile
+- Split MTC Apps
+- Benchmark Matrix Multiplications locally and on Phi
+	(run lscpu to see L1 cache size locally for blocking multiplication)
+- Ideally kernels would not require recompilation of the library

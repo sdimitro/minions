@@ -1,0 +1,12 @@
+- Play with different number of max events
+- Refactor again
+- GeMTC show elapsed time for job completion?
+- Blow up GeMTC
+- Dequeue may receive 2 extra matrices from server (more bus overhead)
+- Revaluate server design
+- Refactor server hard
+- What's up with valgrind errors? (false positives or no?)
+
+
+- SCIF: Refactor clients hard
+- SCIF: Figure out problem with nonblocking IO in SCIF

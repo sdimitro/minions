@@ -1,0 +1,19 @@
+- Refactor printf for err and return -> exit
+- Refactor Hackish sections of Makefile
+- Change pthread allocation to automatic (arraylike) from malloc
+- Error checking mallocs and semaphores
+- give spinlocks a try instead of mutex
+- give pthread conditional vars a try instead of semaphores
+- blog post
+- valgrind all tests
+- try clang and its tools
+- make test cases and programs
+- may need free and malloc just for task_desc
+- take out warning comments
+- try fpic vs fPIC, also check -m64 for Phi
+- explore intel studio's automation with icc for Phi specific features
+- different gcc optimizations
+- try to generalize testing/vagrind
+- introduce coverage/profiling/binary size etc..
+- benchmark
+- Consider OpemMP and Cilk Plus besides pthreads natively
