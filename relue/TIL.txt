@@ -1,0 +1,8 @@
+* Hardcoding *small* tables may aid significantly at runtime.
+* Computationally you don't have to follow the mathematical
+  formula as is.
+* Precomputing can save you a lot!
+* There is a limit on the array length which depends on a variety
+  of software and hardware factors (C/C++).
+* Many times the language doesn't matter.
+* Caching (dynamic programming) can also save you a lot!
