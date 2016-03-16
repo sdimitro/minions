@@ -1,5 +1,5 @@
-PYTHON=python3.5
-PYFILES=project.py
+PYTHON  ?= python3.5
+PYFILES  = project.py
 
 repl:
 	$(PYTHON) -i $(PYFILES)
