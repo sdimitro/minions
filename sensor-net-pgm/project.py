@@ -69,14 +69,30 @@ def populate_sensor_rvs(model, sensor_id, sensor_data):
 def train_model(data):
     model = defaultdict(lambda: [0, 0, [], 0])
     sensor_id = 0
-
     for sensor_readings in data:
         populate_sensor_rvs(model, sensor_id, sensor_readings)
         sensor_id += 1
-
     return model
 
-#### RUNNING CODE
+#### Inference
+
+def highest_prediction_variance_sensors(model, timestamp, num_sensors, n):
+    res = []
+
+    variance_table = {}
+    for sensor_id in range(num_sensors):
+        rv_index = model_index(sensor_id, timestamp)
+        variable_table[sensor_id] = rv_var(model, rv_index)
+
+    sorted_sensor_list = sorted(variance_table,
+                                key=variance_table.get,
+                                reverse = True)
+    return sorted_sensor_list[:n]
+
+def to_be_predicted(sensor_id, whitelist):
+    return sensor_id in whitelist
+
+#### Running code
 
 hum_train_datafile = 'intelLabDataProcessed/intelHumidityTrain.csv'
 tmp_train_datafile = 'intelLabDataProcessed/intelTemperatureTrain.csv'
