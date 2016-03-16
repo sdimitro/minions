@@ -78,21 +78,71 @@ def train_model(data):
 
 def highest_prediction_variance_sensors(model, timestamp, num_sensors, n):
     res = []
-
     variance_table = {}
     for sensor_id in range(num_sensors):
         rv_index = model_index(sensor_id, timestamp)
-        variable_table[sensor_id] = rv_var(model, rv_index)
-
+        variance_table[sensor_id] = rv_var(model, rv_index)
     sorted_sensor_list = sorted(variance_table,
                                 key=variance_table.get,
                                 reverse = True)
     return sorted_sensor_list[:n]
 
 def to_be_predicted(sensor_id, whitelist):
-    return sensor_id in whitelist
+    return not sensor_id in whitelist
+
+def generate_sensor_window(start, limit, window_size):
+    res = []
+    ids_left = window_size
+    current_id = start
+    while ids_left > 0:
+        res.append(current_id % limit)
+        ids_left -= 1
+        current_id += 1
+    return res, (current_id % limit)
+
+def infer_timestamp(model, test_data, timestamp, whitelist):
+    num_sensors = len(test_data)
+    res = np.zeros(num_sensors)
+    for sensor in range(num_sensors):
+        if to_be_predicted(sensor, whitelist):
+            rv_index = model_index(sensor, timestamp)
+            res[sensor] = rv_mean(model, rv_index)
+        else:
+            res[sensor] = tes_data[sensor]
+    return res
+
+def infer_window(model, data, window_size):
+    num_sensors = len(data)
+    num_timestamps = len(data[0])
+    transposed_res = np.zeros(num_timestamps, num_sensors)
+
+    initial_timestamp = 0.5
+    lowest_timestamp  = 0.0
+    highest_timestamp = 23.5
+    timestamp_step    = 0.5
+
+    i = 0
+    window_start = 0
+    current_timestamp = initial_timestamp
+    for sensor_data in data.T:
+        whitelist, window_start = generate_current_window(window_start,
+                                                          num_sensors,
+                                                          window_size)
+        transposed_res[i] = infer_timestamp(model,
+                                            sensor_data,
+                                            current_timestamp,
+                                            whitelist)
+
+        i += 1
+        current_timestamp += timestamp_step
+        if current_timestamp > highest_timestamp:
+            current_timestamp = lowest_timestamp
+
+    return transposed_res.T
 
 #### Running code
+
+budgets = [0, 5, 10, 20, 25]
 
 hum_train_datafile = 'intelLabDataProcessed/intelHumidityTrain.csv'
 tmp_train_datafile = 'intelLabDataProcessed/intelTemperatureTrain.csv'
