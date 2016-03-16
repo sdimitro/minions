@@ -7,17 +7,28 @@ import numpy as np
 def read_csv_data(filename):
     return np.genfromtxt(filename, delimiter=',', skip_header=1)[:,1:]
 
+def generate_header(length):
+    header = "sensors"
+    timestamp = 0.5
+    for i in range(length):
+        header += "," + str(timestamp)
+        timestamp += 0.5
+        if timestamp == 24.0:
+            timestamp = 0.0
+    header += "\n"
+    return header
+
 def write_csv_data(filename, data):
-    generated_header = "TODO"
-    # generated_sensor_ids = np.arange(0, 50)
-    # add generated row and column to data
-    np.savetxt(filename,
-               data,
-               #np.insert(data, 0, generated_sensor_ids, axis=1),
-               fmt='%.2E',
-               delimiter=',',
-               header=generated_header,
-               comments='')
+    header = generate_header(len(data[0]))
+    num_sensors = len(data)
+    with open(filename, mode='w') as f:
+        f.write(header)
+        for sensor_id in range(num_sensors):
+            line = str(sensor_id)
+            for entry in data[sensor_id]:
+                line += "," + ("%.2E" % entry)
+            line += "\n"
+            f.write(line)
 
 #### Modeling
 
@@ -90,7 +101,7 @@ def highest_prediction_variance_sensors(model, timestamp, num_sensors, n):
 def to_be_predicted(sensor_id, whitelist):
     return not sensor_id in whitelist
 
-def generate_sensor_window(start, limit, window_size):
+def generate_window(start, limit, window_size):
     res = []
     ids_left = window_size
     current_id = start
@@ -108,13 +119,13 @@ def infer_timestamp(model, test_data, timestamp, whitelist):
             rv_index = model_index(sensor, timestamp)
             res[sensor] = rv_mean(model, rv_index)
         else:
-            res[sensor] = tes_data[sensor]
+            res[sensor] = test_data[sensor]
     return res
 
 def infer_window(model, data, window_size):
     num_sensors = len(data)
     num_timestamps = len(data[0])
-    transposed_res = np.zeros(num_timestamps, num_sensors)
+    transposed_res = np.zeros((num_timestamps, num_sensors))
 
     initial_timestamp = 0.5
     lowest_timestamp  = 0.0
@@ -125,9 +136,9 @@ def infer_window(model, data, window_size):
     window_start = 0
     current_timestamp = initial_timestamp
     for sensor_data in data.T:
-        whitelist, window_start = generate_current_window(window_start,
-                                                          num_sensors,
-                                                          window_size)
+        whitelist, window_start = generate_window(window_start,
+                                                  num_sensors,
+                                                  window_size)
         transposed_res[i] = infer_timestamp(model,
                                             sensor_data,
                                             current_timestamp,
@@ -147,12 +158,20 @@ budgets = [0, 5, 10, 20, 25]
 hum_train_datafile = 'intelLabDataProcessed/intelHumidityTrain.csv'
 tmp_train_datafile = 'intelLabDataProcessed/intelTemperatureTrain.csv'
 
+hum_test_datafile = 'intelLabDataProcessed/intelHumidityTest.csv'
+tmp_test_datafile = 'intelLabDataProcessed/intelTemperatureTest.csv'
+
 hum_train_data = read_csv_data(hum_train_datafile)
 tmp_train_data = read_csv_data(tmp_train_datafile)
+
+hum_test_data = read_csv_data(hum_test_datafile)
+tmp_test_data = read_csv_data(tmp_test_datafile)
 
 hum_model = train_model(hum_train_data)
 tmp_model = train_model(tmp_train_data)
 
-#print(hum_model)
-#print('============')
-#print(tmp_model)
+for b in budgets:
+    hum_w_filename = "w%d.csv" % b
+    hum_v_filename = "v%d.csv" % b
+    hum_w_pred = infer_window(hum_model, hum_test_data, b)
+    write_csv_data(hum_w_filename, hum_w_pred)
