@@ -2,34 +2,6 @@ from collections import defaultdict
 
 import numpy as np
 
-#### File I/O
-
-def read_csv_data(filename):
-    return np.genfromtxt(filename, delimiter=',', skip_header=1)[:,1:]
-
-def generate_header(length):
-    header = "sensors"
-    timestamp = 0.5
-    for i in range(length):
-        header += "," + str(timestamp)
-        timestamp += 0.5
-        if timestamp == 24.0:
-            timestamp = 0.0
-    header += "\n"
-    return header
-
-def write_csv_data(filename, data):
-    header = generate_header(len(data[0]))
-    num_sensors = len(data)
-    with open(filename, mode='w') as f:
-        f.write(header)
-        for sensor_id in range(num_sensors):
-            line = str(sensor_id)
-            for entry in data[sensor_id]:
-                line += "," + ("%.2E" % entry)
-            line += "\n"
-            f.write(line)
-
 #### Helper Functions
 
 def get_num_sensors(readings):
@@ -54,6 +26,28 @@ def generate_timestamps(num_timestamps):
         if current_timestamp > highest_timestamp:
             current_timestamp = lowest_timestamp
     return res
+
+#### File I/O
+
+def read_csv_data(filename):
+    return np.genfromtxt(filename, delimiter=',', skip_header=1)[:,1:]
+
+def generate_header(length):
+    header  = "sensors,"
+    header += ",".join(list(map(lambda x: str(x),
+                                generate_timestamps(length))))
+    header += "\n"
+    return header
+
+def write_csv_data(filename, data):
+    with open(filename, mode='w') as f:
+        f.write(generate_header(get_num_timestamps(data)))
+        for sensor_id in range(get_num_sensors(data)):
+            line = str(sensor_id) + ","
+            line += ",".join(list(map(lambda x: "%.2E" % x,
+                                      data[sensor_id])))
+            line += "\n"
+            f.write(line)
 
 #### Modeling
 
