@@ -34,8 +34,7 @@ def read_csv_data(filename):
 
 def generate_header(length):
     header  = "sensors,"
-    header += ",".join(list(map(lambda x: str(x),
-                                generate_timestamps(length))))
+    header += ",".join(map(str, generate_timestamps(length)))
     header += "\n"
     return header
 
@@ -44,10 +43,16 @@ def write_csv_data(filename, data):
         f.write(generate_header(get_num_timestamps(data)))
         for sensor_id in range(get_num_sensors(data)):
             line = str(sensor_id) + ","
-            line += ",".join(list(map(lambda x: "%.2E" % x,
-                                      data[sensor_id])))
+            line += ",".join(map(lambda x: "%.2E" % x,
+                                 data[sensor_id]))
             line += "\n"
             f.write(line)
+
+def write_mae_data(filename, data):
+    lmbd = lambda x: (x + "\t" + str(data[x]))
+    with open(filename, mode='w') as f:
+        f.write("\n".join(map(lmbd, sorted(data))))
+        f.write("\n")
 
 #### Modeling
 
@@ -199,6 +204,10 @@ tmp_test_data  = read_csv_data(tmp_test_datafile)
 hum_model = train_model(hum_train_data)
 tmp_model = train_model(tmp_train_data)
 
+# Mean Absolute Error Statistics
+hum_mae = {}
+tmp_mae = {}
+
 for budget in budgets:
     w_filename = "w%d.csv" % budget
     v_filename = "v%d.csv" % budget
@@ -207,8 +216,15 @@ for budget in budgets:
     tmp_v_pred = infer_var(tmp_model, tmp_test_data, budget)
     write_csv_data(tmp_results_folder + w_filename, tmp_w_pred)
     write_csv_data(tmp_results_folder + v_filename, tmp_v_pred)
+    tmp_mae[w_filename] = np.mean(np.absolute(tmp_w_pred - tmp_test_data))
+    tmp_mae[v_filename] = np.mean(np.absolute(tmp_v_pred - tmp_test_data))
 
     hum_w_pred = infer_window(hum_model, hum_test_data, budget)
     hum_v_pred = infer_var(hum_model, hum_test_data, budget)
     write_csv_data(hum_results_folder + w_filename, hum_w_pred)
     write_csv_data(hum_results_folder + v_filename, hum_v_pred)
+    hum_mae[w_filename] = np.mean(np.absolute(hum_w_pred - hum_test_data))
+    hum_mae[v_filename] = np.mean(np.absolute(hum_v_pred - hum_test_data))
+
+write_mae_data(results_dir + 'temperature_mae.txt', tmp_mae)
+write_mae_data(results_dir + 'humidity_mae.txt', hum_mae)
