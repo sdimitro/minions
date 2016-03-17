@@ -1,0 +1,12 @@
+Even though this project and the code have their own licensing
+which allowes them to be copied, share and modified for free
+(hopefully by also giving the proper attributions), if you
+ever present the report anywhere please attach the working code
+with it.
+
+It makes it easier for other to find my mistakes and easier for
+me to correct them. A paper without working code, not only
+doesn't add any value. It can potentially be harmful.
+
+Thank you,
+Serapheim

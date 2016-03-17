@@ -1,0 +1,14 @@
+set terminal pngcairo
+set output 'humidity_mae.png'
+
+set style data histograms
+set boxwidth 1
+set style fill solid
+
+set xlabel 'Budget'
+set ylabel 'Mean Absolute Error'
+set yrange [0 : 3.6]
+
+plot "humidity_mae.dat" using 2:xtic(1)\
+ title "Variance" lt rgb "gold",\
+ "" using 3 title "Window" lt rgb "red"
