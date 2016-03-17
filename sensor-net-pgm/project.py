@@ -46,16 +46,10 @@ def rv_add_entry(model, index, entry):
     model[index][3] += 1
 
 def rv_calc_mean(model, index):
-    model[index][0] = sum(model[index][2]) / model[index][3]
+    model[index][0] = np.mean(model[index][2])
 
 def rv_calc_var(model, index):
-    mean = model[index][0]
-    N = model[index][3]
-    summa = 0
-
-    for entry in model[index][2]:
-        summa += (entry - mean) ** 2
-    model[index][1] = summa / N
+    model[index][1] = np.var(model[index][2])
 
 def populate_sensor_rvs(model, sensor_id, sensor_data):
     initial_timestamp = 0.5
@@ -151,6 +145,38 @@ def infer_window(model, data, window_size):
 
     return transposed_res.T
 
+#TODO: infer_window and infer_var code are
+#      95% the same. Merge them!
+def infer_var(model, data, n):
+    num_sensors = len(data)
+    num_timestamps = len(data[0])
+    transposed_res = np.zeros((num_timestamps, num_sensors))
+
+    initial_timestamp = 0.5
+    lowest_timestamp  = 0.0
+    highest_timestamp = 23.5
+    timestamp_step    = 0.5
+
+    i = 0
+    window_start = 0
+    current_timestamp = initial_timestamp
+    for sensor_data in data.T:
+        whitelist = highest_prediction_variance_sensors(model,
+                                                        current_timestamp,
+                                                        num_sensors,
+                                                        n)
+        transposed_res[i] = infer_timestamp(model,
+                                            sensor_data,
+                                            current_timestamp,
+                                            whitelist)
+
+        i += 1
+        current_timestamp += timestamp_step
+        if current_timestamp > highest_timestamp:
+            current_timestamp = lowest_timestamp
+
+    return transposed_res.T
+
 #### Running code
 
 budgets = [0, 5, 10, 20, 25]
@@ -174,4 +200,6 @@ for b in budgets:
     hum_w_filename = "w%d.csv" % b
     hum_v_filename = "v%d.csv" % b
     hum_w_pred = infer_window(hum_model, hum_test_data, b)
+    hum_v_pred = infer_var(hum_model, hum_test_data, b)
     write_csv_data(hum_w_filename, hum_w_pred)
+    write_csv_data(hum_v_filename, hum_v_pred)
