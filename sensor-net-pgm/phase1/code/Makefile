@@ -8,4 +8,4 @@ repl:
 	$(PYTHON) -i $(PYFILES)
 
 deps:
-	@echo "numpy"
+	@echo "numpy (v1.10)"
