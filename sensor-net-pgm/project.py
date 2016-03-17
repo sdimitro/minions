@@ -30,6 +30,31 @@ def write_csv_data(filename, data):
             line += "\n"
             f.write(line)
 
+#### Helper Functions
+
+def get_num_sensors(readings):
+    return len(readings)
+
+def get_num_timestamps(readings):
+    return len(readings[0])
+
+def generate_timestamps(num_timestamps):
+    res = []
+
+    initial_timestamp = 0.5
+    lowest_timestamp  = 0.0
+    highest_timestamp = 23.5
+    timestamp_step    = 0.5
+
+    current_timestamp = initial_timestamp
+    for i in range(num_timestamps):
+        res.append(current_timestamp)
+
+        current_timestamp += timestamp_step
+        if current_timestamp > highest_timestamp:
+            current_timestamp = lowest_timestamp
+    return res
+
 #### Modeling
 
 def model_index(sensor_id, timestamp):
@@ -51,20 +76,12 @@ def rv_calc_mean(model, index):
 def rv_calc_var(model, index):
     model[index][1] = np.var(model[index][2])
 
-def populate_sensor_rvs(model, sensor_id, sensor_data):
-    initial_timestamp = 0.5
-    lowest_timestamp  = 0.0
-    highest_timestamp = 23.5
-    timestamp_step    = 0.5
-
-    current_timestamp = initial_timestamp
+def populate_sensor_rvs(model, sensor_id, sensor_data, timestamps):
+    i = 0
     for entry in sensor_data:
-        rv_index = model_index(sensor_id, current_timestamp)
+        rv_index = model_index(sensor_id, timestamps[i])
         rv_add_entry(model, rv_index, entry)
-
-        current_timestamp += timestamp_step
-        if current_timestamp > highest_timestamp:
-            current_timestamp = lowest_timestamp
+        i += 1
 
     for timestamp in np.arange(0.0, 24.0, 0.5):
         rv_index = model_index(sensor_id, timestamp)
@@ -74,8 +91,9 @@ def populate_sensor_rvs(model, sensor_id, sensor_data):
 def train_model(data):
     model = defaultdict(lambda: [0, 0, [], 0])
     sensor_id = 0
+    timestamps = generate_timestamps(get_num_timestamps(data))
     for sensor_readings in data:
-        populate_sensor_rvs(model, sensor_id, sensor_readings)
+        populate_sensor_rvs(model, sensor_id, sensor_readings, timestamps)
         sensor_id += 1
     return model
 
@@ -116,65 +134,53 @@ def infer_timestamp(model, test_data, timestamp, whitelist):
             res[sensor] = test_data[sensor]
     return res
 
+def generate_windows(num_timestamps, num_sensors, window_size):
+    windows = []
+    window_start = 0
+    for i in range(num_timestamps):
+        window, window_start = generate_window(window_start,
+                                               num_sensors,
+                                               window_size)
+        windows.append(window)
+    return windows
+
+def collect_highest_vars(model, timestamps, num_sensors, n):
+    whitelists = []
+    for timestamp in timestamps:
+        whitelist = highest_prediction_variance_sensors(model,
+                                                        timestamp,
+                                                        num_sensors,
+                                                        n)
+        whitelists.append(whitelist)
+    return whitelists
+
 def infer_window(model, data, window_size):
     num_sensors = len(data)
     num_timestamps = len(data[0])
-    transposed_res = np.zeros((num_timestamps, num_sensors))
+    timestamps = generate_timestamps(num_timestamps)
+    whitelists = generate_windows(num_timestamps,
+                                  num_sensors,
+                                  window_size)
+    return infer(model, data, timestamps, whitelists)
 
-    initial_timestamp = 0.5
-    lowest_timestamp  = 0.0
-    highest_timestamp = 23.5
-    timestamp_step    = 0.5
-
-    i = 0
-    window_start = 0
-    current_timestamp = initial_timestamp
-    for sensor_data in data.T:
-        whitelist, window_start = generate_window(window_start,
-                                                  num_sensors,
-                                                  window_size)
-        transposed_res[i] = infer_timestamp(model,
-                                            sensor_data,
-                                            current_timestamp,
-                                            whitelist)
-
-        i += 1
-        current_timestamp += timestamp_step
-        if current_timestamp > highest_timestamp:
-            current_timestamp = lowest_timestamp
-
-    return transposed_res.T
-
-#TODO: infer_window and infer_var code are
-#      95% the same. Merge them!
 def infer_var(model, data, n):
     num_sensors = len(data)
     num_timestamps = len(data[0])
-    transposed_res = np.zeros((num_timestamps, num_sensors))
+    timestamps = generate_timestamps(num_timestamps)
+    whitelists = collect_highest_vars(model, timestamps, num_sensors, n)
+    return infer(model, data, timestamps, whitelists)
 
-    initial_timestamp = 0.5
-    lowest_timestamp  = 0.0
-    highest_timestamp = 23.5
-    timestamp_step    = 0.5
-
+def infer(model, data, timestamps, whitelists):
+    transposed_data = data.T
+    transposed_res = np.zeros_like(transposed_data)
     i = 0
-    window_start = 0
-    current_timestamp = initial_timestamp
-    for sensor_data in data.T:
-        whitelist = highest_prediction_variance_sensors(model,
-                                                        current_timestamp,
-                                                        num_sensors,
-                                                        n)
+    for sensor_data in transposed_data:
         transposed_res[i] = infer_timestamp(model,
                                             sensor_data,
-                                            current_timestamp,
-                                            whitelist)
+                                            timestamps[i],
+                                            whitelists[i])
 
         i += 1
-        current_timestamp += timestamp_step
-        if current_timestamp > highest_timestamp:
-            current_timestamp = lowest_timestamp
-
     return transposed_res.T
 
 #### Running code
