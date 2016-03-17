@@ -181,25 +181,34 @@ def infer(model, data, timestamps, whitelists):
 
 budgets = [0, 5, 10, 20, 25]
 
-hum_train_datafile = 'intelLabDataProcessed/intelHumidityTrain.csv'
-tmp_train_datafile = 'intelLabDataProcessed/intelTemperatureTrain.csv'
+data_dir = '../data/intelLabDataProcessed/'
+hum_train_datafile = data_dir + 'intelHumidityTrain.csv'
+tmp_train_datafile = data_dir + 'intelTemperatureTrain.csv'
+hum_test_datafile  = data_dir + 'intelHumidityTest.csv'
+tmp_test_datafile  = data_dir + 'intelTemperatureTest.csv'
 
-hum_test_datafile = 'intelLabDataProcessed/intelHumidityTest.csv'
-tmp_test_datafile = 'intelLabDataProcessed/intelTemperatureTest.csv'
+results_dir = '../results/'
+hum_results_folder = results_dir + 'humidity/'
+tmp_results_folder = results_dir + 'temperature/'
 
 hum_train_data = read_csv_data(hum_train_datafile)
 tmp_train_data = read_csv_data(tmp_train_datafile)
-
-hum_test_data = read_csv_data(hum_test_datafile)
-tmp_test_data = read_csv_data(tmp_test_datafile)
+hum_test_data  = read_csv_data(hum_test_datafile)
+tmp_test_data  = read_csv_data(tmp_test_datafile)
 
 hum_model = train_model(hum_train_data)
 tmp_model = train_model(tmp_train_data)
 
-for b in budgets:
-    hum_w_filename = "w%d.csv" % b
-    hum_v_filename = "v%d.csv" % b
-    hum_w_pred = infer_window(hum_model, hum_test_data, b)
-    hum_v_pred = infer_var(hum_model, hum_test_data, b)
-    write_csv_data(hum_w_filename, hum_w_pred)
-    write_csv_data(hum_v_filename, hum_v_pred)
+for budget in budgets:
+    w_filename = "w%d.csv" % budget
+    v_filename = "v%d.csv" % budget
+
+    tmp_w_pred = infer_window(tmp_model, tmp_test_data, budget)
+    tmp_v_pred = infer_var(tmp_model, tmp_test_data, budget)
+    write_csv_data(tmp_results_folder + w_filename, tmp_w_pred)
+    write_csv_data(tmp_results_folder + v_filename, tmp_v_pred)
+
+    hum_w_pred = infer_window(hum_model, hum_test_data, budget)
+    hum_v_pred = infer_var(hum_model, hum_test_data, budget)
+    write_csv_data(hum_results_folder + w_filename, hum_w_pred)
+    write_csv_data(hum_results_folder + v_filename, hum_v_pred)

@@ -1,0 +1,7 @@
+- Rewrite code from Common Lisp to Python              [Done]
+- Change project structure to required one             [Done]
+- Add Readme file                                      [Pending]
+- Add Makefile entries for visual diff inspection      [Pending]
+- Write DocTests and write DocTest entry on Makefile   [Pending]
+- Add comments to running code                         [Pending]
+- Write AWK script to verify window and var columns    [Pending]
