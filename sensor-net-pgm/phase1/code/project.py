@@ -4,6 +4,9 @@ import numpy as np
 
 #### Helper Functions
 
+def irange(start, end, step=1):
+    return range(start, end + step, step)
+
 def get_num_sensors(readings):
     return len(readings)
 
@@ -11,21 +14,16 @@ def get_num_timestamps(readings):
     return len(readings[0])
 
 def generate_timestamps(num_timestamps):
-    res = []
-
-    initial_timestamp = 0.5
     lowest_timestamp  = 0.0
     highest_timestamp = 23.5
     timestamp_step    = 0.5
-
-    current_timestamp = initial_timestamp
-    for i in range(num_timestamps):
-        res.append(current_timestamp)
-
-        current_timestamp += timestamp_step
-        if current_timestamp > highest_timestamp:
-            current_timestamp = lowest_timestamp
-    return res
+    initial_timestamp = 0.5
+    timestamps = [t for t in np.arange(lowest_timestamp,
+                                       highest_timestamp + timestamp_step,
+                                       timestamp_step)]
+    start = timestamps.index(initial_timestamp)
+    return [timestamps[i % len(timestamps)]
+                      for i in irange(start, num_timestamps)]
 
 #### File I/O
 
@@ -118,7 +116,7 @@ def generate_window(start, limit, window_size):
     return res, (current_id % limit)
 
 def infer_timestamp(model, test_data, timestamp, whitelist):
-    num_sensors = len(test_data)
+    num_sensors = get_num_sensors(test_data)
     res = np.zeros(num_sensors)
     for sensor in range(num_sensors):
         if to_be_predicted(sensor, whitelist):
