@@ -41,10 +41,9 @@ def generate_header(length):
 def write_csv_data(filename, data):
     with open(filename, mode='w') as f:
         f.write(generate_header(get_num_timestamps(data)))
-        for sensor_id in range(get_num_sensors(data)):
+        for sensor_id, sensor_data in enumerate(data):
             line = str(sensor_id) + ","
-            line += ",".join(map(lambda x: "%.2E" % x,
-                                 data[sensor_id]))
+            line += ",".join(map(lambda x: "%.2E" % x, sensor_data))
             line += "\n"
             f.write(line)
 
@@ -76,11 +75,9 @@ def rv_calc_var(model, index):
     model[index][1] = np.var(model[index][2])
 
 def populate_sensor_rvs(model, sensor_id, sensor_data, timestamps):
-    i = 0
-    for entry in sensor_data:
+    for i, entry in enumerate(sensor_data):
         rv_index = model_index(sensor_id, timestamps[i])
         rv_add_entry(model, rv_index, entry)
-        i += 1
 
     for timestamp in np.arange(0.0, 24.0, 0.5):
         rv_index = model_index(sensor_id, timestamp)
@@ -89,11 +86,9 @@ def populate_sensor_rvs(model, sensor_id, sensor_data, timestamps):
 
 def train_model(data):
     model = defaultdict(lambda: [0, 0, [], 0])
-    sensor_id = 0
     timestamps = generate_timestamps(get_num_timestamps(data))
-    for sensor_readings in data:
+    for sensor_id, sensor_readings in enumerate(data):
         populate_sensor_rvs(model, sensor_id, sensor_readings, timestamps)
-        sensor_id += 1
     return model
 
 #### Inference
@@ -144,18 +139,15 @@ def generate_windows(num_timestamps, num_sensors, window_size):
     return windows
 
 def collect_highest_vars(model, timestamps, num_sensors, n):
-    whitelists = []
-    for timestamp in timestamps:
-        whitelist = highest_prediction_variance_sensors(model,
-                                                        timestamp,
-                                                        num_sensors,
-                                                        n)
-        whitelists.append(whitelist)
-    return whitelists
+    return [highest_prediction_variance_sensors(model,
+                                                timestamp,
+                                                num_sensors,
+                                                n)
+                for timestamp in timestamps]
 
 def infer_window(model, data, window_size):
-    num_sensors = len(data)
-    num_timestamps = len(data[0])
+    num_sensors = get_num_sensors(data)
+    num_timestamps = get_num_timestamps(data)
     timestamps = generate_timestamps(num_timestamps)
     whitelists = generate_windows(num_timestamps,
                                   num_sensors,
@@ -163,8 +155,8 @@ def infer_window(model, data, window_size):
     return infer(model, data, timestamps, whitelists)
 
 def infer_var(model, data, n):
-    num_sensors = len(data)
-    num_timestamps = len(data[0])
+    num_sensors = get_num_sensors(data)
+    num_timestamps = get_num_timestamps(data)
     timestamps = generate_timestamps(num_timestamps)
     whitelists = collect_highest_vars(model, timestamps, num_sensors, n)
     return infer(model, data, timestamps, whitelists)
@@ -172,14 +164,12 @@ def infer_var(model, data, n):
 def infer(model, data, timestamps, whitelists):
     transposed_data = data.T
     transposed_res = np.zeros_like(transposed_data)
-    i = 0
-    for sensor_data in transposed_data:
+    for i, sensor_data in enumerate(transposed_data):
         transposed_res[i] = infer_timestamp(model,
                                             sensor_data,
                                             timestamps[i],
                                             whitelists[i])
 
-        i += 1
     return transposed_res.T
 
 #### Running code
