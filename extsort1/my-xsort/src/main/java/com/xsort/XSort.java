@@ -93,9 +93,8 @@ public class XSort {
 	}
 	/* String size estimation settings - END */
 
-        /**
-         *
-         */
+	/* XSort - BEGIN */
+
         public static void displayUsage() {
                 System.out
                         .println("java com.xsort.XSort inputfile outputfile");
@@ -578,50 +577,6 @@ public class XSort {
         }
 
         /**
-         * This will simply load the file by blocks of lines, then sort them
-         * in-memory, and write the result to temporary files that have to be
-         * merged later.
-         *
-         * @param fbr
-         *                data source
-         * @param datalength
-         *                estimated data volume (in bytes)
-         * @return a list of temporary flat files
-         * @throws IOException
-         */
-        public static List<File> sortInBatch(final BufferedReader fbr,
-                final long datalength) throws IOException {
-                return sortInBatch(fbr, datalength, defaultcomparator,
-                        DEFAULTMAXTEMPFILES, estimateAvailableMemory(),
-                        Charset.defaultCharset(), null, false, 0, false);
-        }
-
-        /**
-         * This will simply load the file by blocks of lines, then sort them
-         * in-memory, and write the result to temporary files that have to be
-         * merged later.
-         *
-         * @param fbr
-         *                data source
-         * @param datalength
-         *                estimated data volume (in bytes)
-         * @param cmp
-         *                string comparator
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded.
-         * @return a list of temporary flat files
-         * @throws IOException
-         */
-        public static List<File> sortInBatch(final BufferedReader fbr,
-                final long datalength, final Comparator<String> cmp,
-                final boolean distinct) throws IOException {
-                return sortInBatch(fbr, datalength, cmp, DEFAULTMAXTEMPFILES,
-                        estimateAvailableMemory(), Charset.defaultCharset(),
-                        null, distinct, 0, false);
-        }
-
-        /**
          * @param fbr
          *                data source
          * @param datalength
@@ -694,89 +649,12 @@ public class XSort {
         }
 
         /**
-         * This will simply load the file by blocks of lines, then sort them
-         * in-memory, and write the result to temporary files that have to be
-         * merged later.
-         *
-         * @param file
-         *                some flat file
-         * @return a list of temporary flat files
-         * @throws IOException
+	 * [MIKE]
          */
         public static List<File> sortInBatch(File file) throws IOException {
+		Charset cs = Charset.defaultCharset();
                 return sortInBatch(file, defaultcomparator,
-                        DEFAULTMAXTEMPFILES, Charset.defaultCharset(), null,
-                        false);
-        }
-
-        /**
-         * This will simply load the file by blocks of lines, then sort them
-         * in-memory, and write the result to temporary files that have to be
-         * merged later.
-         *
-         * @param file
-         *                some flat file
-         * @param cmp
-         *                string comparator
-         * @return a list of temporary flat files
-         * @throws IOException
-         */
-        public static List<File> sortInBatch(File file, Comparator<String> cmp)
-                throws IOException {
-                return sortInBatch(file, cmp, DEFAULTMAXTEMPFILES,
-                        Charset.defaultCharset(), null, false);
-        }
-
-        /**
-         * This will simply load the file by blocks of lines, then sort them
-         * in-memory, and write the result to temporary files that have to be
-         * merged later.
-         *
-         * @param file
-         *                some flat file
-         * @param cmp
-         *                string comparator
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded.
-         * @return a list of temporary flat files
-         * @throws IOException
-         */
-        public static List<File> sortInBatch(File file, Comparator<String> cmp,
-                boolean distinct) throws IOException {
-                return sortInBatch(file, cmp, DEFAULTMAXTEMPFILES,
-                        Charset.defaultCharset(), null, distinct);
-        }
-
-        /**
-         * This will simply load the file by blocks of lines, then sort them
-         * in-memory, and write the result to temporary files that have to be
-         * merged later. You can specify a bound on the number of temporary
-         * files that will be created.
-         *
-         * @param file
-         *                some flat file
-         * @param cmp
-         *                string comparator
-         * @param maxtmpfiles
-         *                maximal number of temporary files
-         * @param cs
-         *                character set to use (can use
-         *                Charset.defaultCharset())
-         * @param tmpdirectory
-         *                location of the temporary files (set to null for
-         *                default location)
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded.
-         * @return a list of temporary flat files
-         * @throws IOException
-         */
-        public static List<File> sortInBatch(File file, Comparator<String> cmp,
-                int maxtmpfiles, Charset cs, File tmpdirectory, boolean distinct)
-                throws IOException {
-                return sortInBatch(file, cmp, maxtmpfiles, cs, tmpdirectory,
-                        distinct, 0, false);
+                        DEFAULTMAXTEMPFILES, cs, null, false, 0, false);
         }
 
         /**
@@ -832,7 +710,7 @@ public class XSort {
          * Default maximal number of temporary files allowed.
          */
         public static final int DEFAULTMAXTEMPFILES = 1024;
-
+	/* XSort - END */
 }
 
 /**
