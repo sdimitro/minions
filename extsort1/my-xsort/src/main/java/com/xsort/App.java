@@ -1,13 +1,25 @@
 package com.xsort;
 
-/**
- * Hello world!
- *
- */
+import java.util.List;
+import java.io.File;
+import java.io.IOException;
+
 public class App 
 {
-    public static void main( String[] args )
+    public static void main(String[] args)
     {
-        System.out.println( "Hello World!" );
+        if (args.length < 1) {
+	    System.out.println("error: no input file as an argument!");
+	    System.exit(-1);
+	}
+
+        System.out.println("Sorting " + args[0] + " ...");
+
+	try {
+	    List<File> l = ExternalSort.sortInBatch(new File(args[0]));
+	    ExternalSort.mergeSortedFiles(l, new File(args[0] + ".sorted"));
+	} catch (IOException ioe) {
+	    System.out.println(ioe);
+	}
     }
 }
