@@ -24,35 +24,81 @@ import java.util.zip.GZIPOutputStream;
 
 /**
  * Goal: offer a generic external-memory sorting program in Java.
- * 
+ *
  * It must be : - hackable (easy to adapt) - scalable to large files - sensibly
  * efficient.
- * 
+ *
  * This software is in the public domain.
- * 
- * Usage: java com/google/code/externalsorting/ExternalSort somefile.txt out.txt
- * 
+ *
+ * Usage: java com/google/code/externalsorting/XSort somefile.txt out.txt
+ *
  * You can change the default maximal number of temporary files with the -t
- * flag: java com/google/code/externalsorting/ExternalSort somefile.txt out.txt
+ * flag: java com/google/code/externalsorting/XSort somefile.txt out.txt
  * -t 3
- * 
+ *
  * For very large files, you might want to use an appropriate flag to allocate
  * more memory to the Java VM: java -Xms2G
- * com/google/code/externalsorting/ExternalSort somefile.txt out.txt
- * 
+ * com/google/code/externalsorting/XSort somefile.txt out.txt
+ *
  * By (in alphabetical order) Philippe Beaudoin, Eleftherios Chetzakis, Jon
  * Elsas, Christan Grant, Daniel Haran, Daniel Lemire, Sugumaran Harikrishnan,
  * Amit Jain, Thomas Mueller, Jerry Yang, First published: April 2010 originally posted at
  * http://lemire.me/blog/archives/2010/04/01/external-memory-sorting-in-java/
  */
-public class ExternalSort {
+public class XSort {
+
+
+	/* String size estimation settings - BEGIN */
+	private static int OBJ_HEADER;
+	private static int ARR_HEADER;
+	private static int INT_FIELDS = 12;
+	private static int OBJ_REF;
+	private static int OBJ_OVERHEAD;
+	private static boolean IS_64_BIT_JVM;
+	static {
+		// By default we assume 64 bit JVM
+		// (defensive approach since we will get
+		// larger estimations in case we are not sure)
+		IS_64_BIT_JVM = true;
+		// check the system property "sun.arch.data.model"
+		// not very safe, as it might not work for all JVM implementations
+		// nevertheless the worst thing that might happen is that the JVM is 32bit
+		// but we assume its 64bit, so we will be counting a few extra bytes per string object
+		// no harm done here since this is just an approximation.
+		String arch = System.getProperty("sun.arch.data.model");
+		if (arch != null) {
+			if (arch.indexOf("32") != -1) {
+				// If exists and is 32 bit then we assume a 32bit JVM
+				IS_64_BIT_JVM = false;
+			}
+		}
+		// The sizes below are a bit rough as we don't take into account
+		// advanced JVM options such as compressed oops
+		// however if our calculation is not accurate it'll be a bit over
+		// so there is no danger of an out of memory error because of this.
+		OBJ_HEADER = IS_64_BIT_JVM ? 16 : 8;
+		ARR_HEADER = IS_64_BIT_JVM ? 24 : 12;
+		OBJ_REF = IS_64_BIT_JVM ? 8 : 4;
+		OBJ_OVERHEAD = OBJ_HEADER + INT_FIELDS + OBJ_REF + ARR_HEADER;
+	}
+
+	/**
+	 * Estimates the size of a {@link String} object in bytes.
+	 *
+	 * @param s The string to estimate memory footprint.
+	 * @return The <strong>estimated</strong> size in bytes.
+	 */
+	public static long estimatedSizeOf(String s) {
+		return (s.length() * 2) + OBJ_OVERHEAD;
+	}
+	/* String size estimation settings - END */
 
         /**
-         * 
+         *
          */
         public static void displayUsage() {
                 System.out
-                        .println("java com.xsort.ExternalSort inputfile outputfile");
+                        .println("java com.xsort.XSort inputfile outputfile");
                 System.out.println("Flags are:");
                 System.out.println("-v or --verbose: verbose output");
                 System.out.println("-d or --distinct: prune duplicate lines");
@@ -73,7 +119,7 @@ public class ExternalSort {
          * This method calls the garbage collector and then returns the free
          * memory. This avoids problems with applications where the GC hasn't
          * reclaimed memory and reports no available memory.
-         * 
+         *
          * @return available memory
          */
         public static long estimateAvailableMemory() {
@@ -85,7 +131,7 @@ public class ExternalSort {
          * we divide the file into small blocks. If the blocks are too small, we
          * shall create too many temporary files. If they are too big, we shall
          * be using too much memory.
-         * 
+         *
          * @param sizeoffile
          *                how much data (in bytes) can we expect
          * @param maxtmpfiles
@@ -194,7 +240,7 @@ public class ExternalSort {
 
         /**
          * This merges several BinaryFileBuffer to an output writer.
-         * 
+         *
          * @param fbw
          *                A buffer where we write the data.
          * @param cmp
@@ -207,7 +253,7 @@ public class ExternalSort {
          *                Where the data should be read.
          * @return The number of lines sorted. (P. Beaudoin)
          * @throws IOException
-         * 
+         *
          */
         public static int mergeSortedFiles(BufferedWriter fbw,
                 final Comparator<String> cmp, boolean distinct,
@@ -224,7 +270,7 @@ public class ExternalSort {
                         if (!bfb.empty())
                                 pq.add(bfb);
                 int rowcounter = 0;
-                try {                        
+                try {
                         if(!distinct) {
                             while (pq.size() > 0) {
                                     BinaryFileBuffer bfb = pq.poll();
@@ -249,7 +295,7 @@ public class ExternalSort {
                      				bfb.fbr.close();
                      			} else {
                      				pq.add(bfb); // add it back
-                     			}                			
+                     			}
                      		}
                             while (pq.size() > 0) {
                     			BinaryFileBuffer bfb = pq.poll();
@@ -279,7 +325,7 @@ public class ExternalSort {
 
         /**
          * This merges a bunch of temporary flat files
-         * 
+         *
          * @param files
          *                files to be merged
          * @param outputfile
@@ -295,7 +341,7 @@ public class ExternalSort {
 
         /**
          * This merges a bunch of temporary flat files
-         * 
+         *
          * @param files
          * @param outputfile
          * @param cmp
@@ -310,7 +356,7 @@ public class ExternalSort {
 
         /**
          * This merges a bunch of temporary flat files
-         * 
+         *
          * @param files
          * @param outputfile
          * @param cmp
@@ -327,7 +373,7 @@ public class ExternalSort {
 
         /**
          * This merges a bunch of temporary flat files
-         * 
+         *
          * @param files
          * @param outputfile
          * @param cmp
@@ -343,7 +389,7 @@ public class ExternalSort {
 
         /**
          * This merges a bunch of temporary flat files
-         * 
+         *
          * @param files
          *                The {@link List} of sorted {@link File}s to be merged.
          * @param distinct
@@ -370,7 +416,7 @@ public class ExternalSort {
 
         /**
          * This merges a bunch of temporary flat files
-         * 
+         *
          * @param files
          *                The {@link List} of sorted {@link File}s to be merged.
          * @param distinct
@@ -426,23 +472,23 @@ public class ExternalSort {
         /**
          * This sorts a file (input) to an output file (output) using default
          * parameters
-         * 
+         *
          * @param input
          *                source file
-         * 
+         *
          * @param output
          *                output file
          * @throws IOException
          */
         public static void sort(final File input, final File output)
                 throws IOException {
-                ExternalSort.mergeSortedFiles(ExternalSort.sortInBatch(input),
+                XSort.mergeSortedFiles(XSort.sortInBatch(input),
                         output);
         }
 
         /**
          * Sort a list and save it to a temporary file
-         * 
+         *
          * @return the file containing the sorted data
          * @param tmplist
          *                data to be sorted
@@ -464,7 +510,7 @@ public class ExternalSort {
 
         /**
          * Sort a list and save it to a temporary file
-         * 
+         *
          * @return the file containing the sorted data
          * @param tmplist
          *                data to be sorted
@@ -535,7 +581,7 @@ public class ExternalSort {
          * This will simply load the file by blocks of lines, then sort them
          * in-memory, and write the result to temporary files that have to be
          * merged later.
-         * 
+         *
          * @param fbr
          *                data source
          * @param datalength
@@ -554,7 +600,7 @@ public class ExternalSort {
          * This will simply load the file by blocks of lines, then sort them
          * in-memory, and write the result to temporary files that have to be
          * merged later.
-         * 
+         *
          * @param fbr
          *                data source
          * @param datalength
@@ -628,8 +674,7 @@ public class ExternalSort {
                                                         continue;
                                                 }
                                                 tmplist.add(line);
-                                                currentblocksize += StringSizeEstimator
-                                                        .estimatedSizeOf(line);
+                                                currentblocksize += estimatedSizeOf(line);
                                         }
                                         files.add(sortAndSave(tmplist, cmp, cs,
                                                 tmpdirectory, distinct, usegzip));
@@ -652,7 +697,7 @@ public class ExternalSort {
          * This will simply load the file by blocks of lines, then sort them
          * in-memory, and write the result to temporary files that have to be
          * merged later.
-         * 
+         *
          * @param file
          *                some flat file
          * @return a list of temporary flat files
@@ -668,7 +713,7 @@ public class ExternalSort {
          * This will simply load the file by blocks of lines, then sort them
          * in-memory, and write the result to temporary files that have to be
          * merged later.
-         * 
+         *
          * @param file
          *                some flat file
          * @param cmp
@@ -686,7 +731,7 @@ public class ExternalSort {
          * This will simply load the file by blocks of lines, then sort them
          * in-memory, and write the result to temporary files that have to be
          * merged later.
-         * 
+         *
          * @param file
          *                some flat file
          * @param cmp
@@ -708,7 +753,7 @@ public class ExternalSort {
          * in-memory, and write the result to temporary files that have to be
          * merged later. You can specify a bound on the number of temporary
          * files that will be created.
-         * 
+         *
          * @param file
          *                some flat file
          * @param cmp
@@ -739,7 +784,7 @@ public class ExternalSort {
          * in-memory, and write the result to temporary files that have to be
          * merged later. You can specify a bound on the number of temporary
          * files that will be created.
-         * 
+         *
          * @param file
          *                some flat file
          * @param cmp
@@ -793,7 +838,7 @@ public class ExternalSort {
 /**
  * This is essentially a thin wrapper on top of a BufferedReader... which keeps
  * the last line in memory.
- * 
+ *
  * @author Daniel Lemire
  */
 final class BinaryFileBuffer {

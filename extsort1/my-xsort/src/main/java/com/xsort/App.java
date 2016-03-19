@@ -16,8 +16,8 @@ public class App
         System.out.println("Sorting " + args[0] + " ...");
 
 	try {
-	    List<File> l = ExternalSort.sortInBatch(new File(args[0]));
-	    ExternalSort.mergeSortedFiles(l, new File(args[0] + ".sorted"));
+	    List<File> temp = XSort.sortInBatch(new File(args[0]));
+	    XSort.mergeSortedFiles(temp, new File(args[0] + ".sorted"));
 	} catch (IOException ioe) {
 	    System.out.println(ioe);
 	}
