@@ -186,163 +186,75 @@ public class XSort {
         }
 	/* == SPLIT TO INTERMEDIATE AND SORT - END == */
 
-	/* == MERGE SORTED INTERMEDIATES TO FINAL - BEGIN == */
-        /**
-         * This merges several BFC to an output writer.
-         *
-         * @param fbw
-         *                A buffer where we write the data.
-         * @param cmp
-         *                A comparator object that tells us how to sort the
-         *                lines.
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded. (elchetz@gmail.com)
-         * @param buffers
-         *                Where the data should be read.
-         * @return The number of lines sorted. (P. Beaudoin)
-         * @throws IOException
-         *
-         */
-        public static int mergeSortedFiles(BufferedWriter fbw,
-                final Comparator<String> cmp, boolean distinct,
-                List<BFC> buffers) throws IOException {
-                PriorityQueue<BFC> pq = new PriorityQueue<BFC>(
+        private static int mergeByBFCs(BufferedWriter bw,
+                List<BFC> bfcs) throws IOException {
+		// Keep the Buffered File Caches sorted by their
+		// contents (their last line). Remove any empty
+		// caches. Then start flushing each cache to
+		// write to the final file in a sorted manner.
+		// At each flush check if the cache does not
+		// have any other values (which means that the
+		// intermediate file was fully read) and insert
+		// it back with the rest of the Buffered File
+		// Caches. (Optionally: return number of records
+		// sorted)
+
+                PriorityQueue<BFC> cachePQ = new PriorityQueue<BFC>(
                         11, new Comparator<BFC>() {
                                 @Override
-                                public int compare(BFC i,
-                                        BFC j) {
-                                        return cmp.compare(i.access(), j.access());
-                                }
-                        });
-                for (BFC bfb : buffers)
-                        if (!bfb.empty())
-                                pq.add(bfb);
+                                public int compare(BFC a, BFC b) {
+                                        return DEFAULTCMP.compare(a.access(),
+							          b.access());
+                                }});
+
+                for (BFC bfc : bfcs) { if (!bfc.empty()) cachePQ.add(bfc); }
+
                 int rowcounter = 0;
                 try {
-                        if(!distinct) {
-                            while (pq.size() > 0) {
-                                    BFC bfb = pq.poll();
-                                    String r = bfb.flush();
-                                    fbw.write(r);
-                                    fbw.newLine();
-                                    ++rowcounter;
-                                    if (bfb.empty()) {
-                                            bfb.close();
-                                    } else {
-                                            pq.add(bfb); // add it back
-                                    }
-                            }
-                        } else {                                String lastLine = null;
-                            if(pq.size() > 0) {
-                     			BFC bfb = pq.poll();
-                     			lastLine = bfb.flush();
-                     			fbw.write(lastLine);
-                     			fbw.newLine();
-                     			++rowcounter;
-                     			if (bfb.empty()) {
-                     				bfb.close();
-                     			} else {
-                     				pq.add(bfb); // add it back
-                     			}
-                     		}
-                            while (pq.size() > 0) {
-                    			BFC bfb = pq.poll();
-                    			String r = bfb.flush();
-                    			// Skip duplicate lines
-                    			if  (cmp.compare(r, lastLine) != 0) {
-                    				fbw.write(r);
-                    				fbw.newLine();
-                    				lastLine = r;
-                    			}
-                    			++rowcounter;
-                    			if (bfb.empty()) {
-                    				bfb.close();
-                    			} else {
-                    				pq.add(bfb); // add it back
-                    			}
-                            }
-                        }
-                } finally {
-                        fbw.close();
-                        for (BFC bfb : pq)
-                                bfb.close();
-                }
+		    while (cachePQ.size() > 0) {
+			    BFC bfc = cachePQ.poll();
+			    String l = bfc.flush();
+
+			    bw.write(l); bw.newLine(); ++rowcounter;
+
+			    if (bfc.empty()) { bfc.close(); }
+			    else { cachePQ.add(bfc); }
+		    }
+                } finally { bw.close(); for (BFC bfc : cachePQ) bfc.close(); }
                 return rowcounter;
 
         }
 
-        /**
-         * This merges a bunch of temporary flat files
-         *
-         * @param files
-         *                files to be merged
-         * @param outputfile
-         *                output file
-         * @return The number of lines sorted. (P. Beaudoin)
-         * @throws IOException
-         */
-        public static int mergeSortedFiles(List<File> files, File outputfile)
+        public static int mergeIntermediates(List<File> files, File out)
                 throws IOException {
-                return mergeSortedFiles(files, outputfile, DEFAULTCMP,
-				DEFAULTCS, false, APPENDFLAG, GZIPFLAG);
-        }
+		// For each of the intermediates open a BufferedReader
+		// with a Buffered File Cache. Then open a BufferedWriter
+		// stream for the final merging. Execute the final merging
+		// and delete all the intermediate files that are not
+		// needed anymore. (Optionally: return number of rows
 
-        /**
-         * This merges a bunch of temporary flat files
-         *
-         * @param files
-         *                The {@link List} of sorted {@link File}s to be merged.
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded. (elchetz@gmail.com)
-         * @param outputfile
-         *                The output {@link File} to merge the results to.
-         * @param cmp
-         *                The {@link Comparator} to use to compare
-         *                {@link String}s.
-         * @param cs
-         *                The {@link Charset} to be used for the byte to
-         *                character conversion.
-         * @param append
-         *                Pass <code>true</code> if result should append to
-         *                {@link File} instead of overwrite. Default to be false
-         *                for overloading methods.
-         * @param usegzip
-         *                assumes we used gzip compression for temporary files
-         * @return The number of lines sorted. (P. Beaudoin)
-         * @throws IOException
-         * @since v0.1.4
-         */
-        public static int mergeSortedFiles(List<File> files, File outputfile,
-                final Comparator<String> cmp, Charset cs, boolean distinct,
-                boolean append, boolean usegzip) throws IOException {
-                ArrayList<BFC> bfbs = new ArrayList<BFC>();
+                ArrayList<BFC> bfcs = new ArrayList<BFC>();
                 for (File f : files) {
-                        final int BUFFERSIZE = 2048;
-                        InputStream in = new FileInputStream(f);
-                        BufferedReader br;
-                        if (usegzip) {
+                        InputStream is = new FileInputStream(f);
+                        BufferedReader br = new BufferedReader(new InputStreamReader(
+							is, DEFAULTCS));
+                        if (GZIPFLAG) {
                                 br = new BufferedReader(
                                         new InputStreamReader(
-                                                new GZIPInputStream(in,
-                                                        BUFFERSIZE), cs));
-                        } else {
-                                br = new BufferedReader(new InputStreamReader(
-                                        in, cs));
+                                                new GZIPInputStream(is,
+                                                        ZIPBUFFERSIZE),
+						DEFAULTCS));
                         }
-
-                        BFC bfb = new BFC(br);
-                        bfbs.add(bfb);
+			bfcs.add(new BFC(br));
                 }
-                BufferedWriter fbw = new BufferedWriter(new OutputStreamWriter(
-                        new FileOutputStream(outputfile, append), cs));
-                int rowcounter = mergeSortedFiles(fbw, cmp, distinct, bfbs);
-                for (File f : files)
-                        f.delete();
+
+                BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+                        new FileOutputStream(out, APPENDFLAG), DEFAULTCS));
+                int rowcounter = mergeByBFCs(bw, bfcs);
+                for (File f : files) { f.delete(); }
                 return rowcounter;
         }
-	/* == MERGE SORTED INTERMEDIATES TO FINAL - BEGIN == */
+	/* == MERGE SORTED INTERMEDIATES TO FINAL - END == */
 	/* XSort - END */
 }
 
