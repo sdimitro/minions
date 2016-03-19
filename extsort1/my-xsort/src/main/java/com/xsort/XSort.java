@@ -111,6 +111,82 @@ public class XSort {
         }
 	/* == ESTIMATION HELPER FUNCTIONS - END == */
 
+	/* == SPLIT TO INTERMEDIATE AND SORT - BEGIN == */
+        private static File saveSortedTemp(List<String> lines)
+		throws IOException {
+		// Sort and save intermediate file
+
+                // In Java 8, we can do lines = lines.parallelStream().sorted(cmp).collect(Collectors.toCollection(ArrayList<String>::new));
+		Collections.sort(lines, DEFAULTCMP);
+		//
+                File tmpFile = File.createTempFile("intermediate",
+                        "flat", DEFAULTTMPDIR);
+                tmpFile.deleteOnExit();
+
+                OutputStream fos = new FileOutputStream(tmpFile);
+                if (GZIPFLAG) {
+                        fos = new GZIPOutputStream(fos, ZIPBUFFERSIZE) {
+                                {
+                                        this.def.setLevel(Deflater.BEST_SPEED);
+                                }
+                        };
+		}
+                BufferedWriter bw =
+			new BufferedWriter(new OutputStreamWriter(fos,
+						                  DEFAULTCS));
+                try {
+		    for (String r : lines)
+		    { bw.write(r); bw.newLine(); }
+                } finally { bw.close(); }
+                return tmpFile;
+        }
+
+
+        public static List<File> split(File file) throws IOException {
+		// Split file to intermediate sorted files
+		// by reading the given file line by line.
+		// Before reading the file check how much
+		// available memory you have and create
+		// chucks according to it. Keep only one
+		// chuck in memory at a time and also keep
+		// track of all the chunk (flat file) names
+		// in order to return them for future merging
+
+                List<File> files = new ArrayList<File>();
+
+		BufferedReader br = new BufferedReader(new InputStreamReader(
+			new FileInputStream(file), DEFAULTCS));
+		long maxMemory = estAvailMem();
+                long blockSize = estBestBlockSize(file.length(),
+				DEFAULTMAXTEMPFILES, maxMemory);
+
+                try {
+                        List<String> lines = new ArrayList<String>();
+                        String line = "";
+                        try {
+                                while (line != null) {
+                                        long currentBlockSize = 0;
+                                        while (currentBlockSize < blockSize
+                                               &&
+					       (line = br.readLine()) != null) {
+                                                lines.add(line);
+                                                currentBlockSize += estSizeOf(line);
+                                        }
+                                        files.add(saveSortedTemp(lines));
+                                        lines.clear();
+                                }
+                        } catch (EOFException eofe) {
+                                if (lines.size() > 0) {
+                                        files.add(saveSortedTemp(lines));
+                                        lines.clear();
+                                }
+                        }
+                } finally { br.close(); }
+                return files;
+        }
+	/* == SPLIT TO INTERMEDIATE AND SORT - END == */
+
+	/* == MERGE SORTED INTERMEDIATES TO FINAL - BEGIN == */
         /**
          * This merges several BFC to an output writer.
          *
@@ -266,76 +342,7 @@ public class XSort {
                         f.delete();
                 return rowcounter;
         }
-
-        public static File saveSortedTemp(List<String> lines) throws IOException {
-		// Sort and save intermediate file
-
-                // In Java 8, we can do lines = lines.parallelStream().sorted(cmp).collect(Collectors.toCollection(ArrayList<String>::new));
-		Collections.sort(lines, DEFAULTCMP);
-		//
-                File tmpFile = File.createTempFile("intermediate",
-                        "flat", DEFAULTTMPDIR);
-                tmpFile.deleteOnExit();
-
-                OutputStream out = new FileOutputStream(tmpFile);
-                if (GZIPFLAG) {
-                        out = new GZIPOutputStream(out, ZIPBUFFERSIZE) {
-                                {
-                                        this.def.setLevel(Deflater.BEST_SPEED);
-                                }
-                        };
-		}
-                BufferedWriter bw =
-			new BufferedWriter(new OutputStreamWriter(out, DEFAULTCS));
-                try {
-		    for (String r : lines)
-		    { bw.write(r); bw.newLine(); }
-                } finally { bw.close(); }
-                return tmpFile;
-        }
-
-
-        public static List<File> split(File file) throws IOException {
-		// Split file to intermediate sorted files
-		// by reading the given file line by line.
-		// Before reading the file check how much
-		// available memory you have and create
-		// chucks according to it. Keep only one
-		// chuck in memory at a time and also keep
-		// track of all the chunk (flat file) names
-		// in order to return them for future merging
-
-                List<File> files = new ArrayList<File>();
-
-		BufferedReader br = new BufferedReader(new InputStreamReader(
-			new FileInputStream(file), DEFAULTCS));
-		long maxMemory = estAvailMem();
-                long blockSize = estBestBlockSize(file.length(),
-				DEFAULTMAXTEMPFILES, maxMemory);
-
-                try {
-                        List<String> lines = new ArrayList<String>();
-                        String line = "";
-                        try {
-                                while (line != null) {
-                                        long currentBlockSize = 0;
-                                        while ((currentBlockSize < blockSize)
-                                                && ((line = br.readLine()) != null)) {
-                                                lines.add(line);
-                                                currentBlockSize += estSizeOf(line);
-                                        }
-                                        files.add(saveSortedTemp(lines));
-                                        lines.clear();
-                                }
-                        } catch (EOFException eofe) {
-                                if (lines.size() > 0) {
-                                        files.add(saveSortedTemp(lines));
-                                        lines.clear();
-                                }
-                        }
-                } finally { br.close(); }
-                return files;
-        }
+	/* == MERGE SORTED INTERMEDIATES TO FINAL - BEGIN == */
 	/* XSort - END */
 }
 
