@@ -95,25 +95,6 @@ public class XSort {
 
 	/* XSort - BEGIN */
 
-        public static void displayUsage() {
-                System.out
-                        .println("java com.xsort.XSort inputfile outputfile");
-                System.out.println("Flags are:");
-                System.out.println("-v or --verbose: verbose output");
-                System.out.println("-d or --distinct: prune duplicate lines");
-                System.out
-                        .println("-t or --maxtmpfiles (followed by an integer): specify an upper bound on the number of temporary files");
-                System.out
-                        .println("-c or --charset (followed by a charset code): specify the character set to use (for sorting)");
-                System.out
-                        .println("-z or --gzip: use compression for the temporary files");
-                System.out
-                        .println("-H or --header (followed by an integer): ignore the first few lines");
-                System.out
-                        .println("-s or --store (following by a path): where to store the temporary files");
-                System.out.println("-h or --help: display this message");
-        }
-
         /**
          * This method calls the garbage collector and then returns the free
          * memory. This avoids problems with applications where the GC hasn't
@@ -156,86 +137,6 @@ public class XSort {
                 }
                 return blocksize;
         }
-
-        /**
-         * @param args
-         * @throws IOException
-         */
-        //public static void main(final String[] args) throws IOException {
-        //        boolean verbose = false;
-        //        boolean distinct = false;
-        //        int maxtmpfiles = DEFAULTMAXTEMPFILES;
-        //        Charset cs = Charset.defaultCharset();
-        //        String inputfile = null, outputfile = null;
-        //        File tempFileStore = null;
-        //        boolean usegzip = false;
-        //        int headersize = 0;
-        //        for (int param = 0; param < args.length; ++param) {
-        //                if (args[param].equals("-v")
-        //                        || args[param].equals("--verbose")) {
-        //                        verbose = true;
-        //                } else if ((args[param].equals("-h") || args[param]
-        //                        .equals("--help"))) {
-        //                        displayUsage();
-        //                        return;
-        //                } else if ((args[param].equals("-d") || args[param]
-        //                        .equals("--distinct"))) {
-        //                        distinct = true;
-        //                } else if ((args[param].equals("-t") || args[param]
-        //                        .equals("--maxtmpfiles"))
-        //                        && args.length > param + 1) {
-        //                        param++;
-        //                        maxtmpfiles = Integer.parseInt(args[param]);
-        //                        if (headersize < 0) {
-        //                                System.err
-        //                                        .println("maxtmpfiles should be positive");
-        //                        }
-        //                } else if ((args[param].equals("-c") || args[param]
-        //                        .equals("--charset"))
-        //                        && args.length > param + 1) {
-        //                        param++;
-        //                        cs = Charset.forName(args[param]);
-        //                } else if ((args[param].equals("-z") || args[param]
-        //                        .equals("--gzip"))) {
-        //                        usegzip = true;
-        //                } else if ((args[param].equals("-H") || args[param]
-        //                        .equals("--header")) && args.length > param + 1) {
-        //                        param++;
-        //                        headersize = Integer.parseInt(args[param]);
-        //                        if (headersize < 0) {
-        //                                System.err
-        //                                        .println("headersize should be positive");
-        //                        }
-        //                } else if ((args[param].equals("-s") || args[param]
-        //                        .equals("--store")) && args.length > param + 1) {
-        //                        param++;
-        //                        tempFileStore = new File(args[param]);
-        //                } else {
-        //                        if (inputfile == null)
-        //                                inputfile = args[param];
-        //                        else if (outputfile == null)
-        //                                outputfile = args[param];
-        //                        else
-        //                                System.out.println("Unparsed: "
-        //                                        + args[param]);
-        //                }
-        //        }
-        //        if (outputfile == null) {
-        //                System.out
-        //                        .println("please provide input and output file names");
-        //                displayUsage();
-        //                return;
-        //        }
-        //        Comparator<String> comparator = defaultcmp;
-        //        List<File> l = sortInBatch(new File(inputfile), comparator,
-        //                maxtmpfiles, cs, tempFileStore, distinct, headersize,
-        //                usegzip);
-        //        if (verbose)
-        //                System.out
-        //                        .println("created " + l.size() + " tmp files");
-        //        mergeSortedFiles(l, new File(outputfile), comparator, cs,
-        //                distinct, false, usegzip);
-        //}
 
         /**
          * This merges several BinaryFileBuffer to an output writer.
@@ -334,83 +235,13 @@ public class XSort {
          */
         public static int mergeSortedFiles(List<File> files, File outputfile)
                 throws IOException {
-                return mergeSortedFiles(files, outputfile, defaultcmp,
-                        Charset.defaultCharset());
-        }
-
-        /**
-         * This merges a bunch of temporary flat files
-         *
-         * @param files
-         * @param outputfile
-         * @param cmp
-         * @return The number of lines sorted. (P. Beaudoin)
-         * @throws IOException
-         */
-        public static int mergeSortedFiles(List<File> files, File outputfile,
-                final Comparator<String> cmp) throws IOException {
+		Charset cs = Charset.defaultCharset();
+		boolean distinct = false;
+		boolean append = false;
+		boolean usegzip = false;
+		Comparator<String> cmp = defaultcmp;
                 return mergeSortedFiles(files, outputfile, cmp,
-                        Charset.defaultCharset());
-        }
-
-        /**
-         * This merges a bunch of temporary flat files
-         *
-         * @param files
-         * @param outputfile
-         * @param cmp
-         * @param distinct
-         * @return The number of lines sorted. (P. Beaudoin)
-         * @throws IOException
-         */
-        public static int mergeSortedFiles(List<File> files, File outputfile,
-                final Comparator<String> cmp, boolean distinct)
-                throws IOException {
-                return mergeSortedFiles(files, outputfile, cmp,
-                        Charset.defaultCharset(), distinct);
-        }
-
-        /**
-         * This merges a bunch of temporary flat files
-         *
-         * @param files
-         * @param outputfile
-         * @param cmp
-         * @param cs
-         *                character set to use to load the strings
-         * @return The number of lines sorted. (P. Beaudoin)
-         * @throws IOException
-         */
-        public static int mergeSortedFiles(List<File> files, File outputfile,
-                final Comparator<String> cmp, Charset cs) throws IOException {
-                return mergeSortedFiles(files, outputfile, cmp, cs, false);
-        }
-
-        /**
-         * This merges a bunch of temporary flat files
-         *
-         * @param files
-         *                The {@link List} of sorted {@link File}s to be merged.
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded. (elchetz@gmail.com)
-         * @param outputfile
-         *                The output {@link File} to merge the results to.
-         * @param cmp
-         *                The {@link Comparator} to use to compare
-         *                {@link String}s.
-         * @param cs
-         *                The {@link Charset} to be used for the byte to
-         *                character conversion.
-         * @return The number of lines sorted. (P. Beaudoin)
-         * @throws IOException
-         * @since v0.1.2
-         */
-        public static int mergeSortedFiles(List<File> files, File outputfile,
-                final Comparator<String> cmp, Charset cs, boolean distinct)
-                throws IOException {
-                return mergeSortedFiles(files, outputfile, cmp, cs, distinct,
-                        false, false);
+				cs, distinct, append, usegzip);
         }
 
         /**
@@ -483,28 +314,6 @@ public class XSort {
                 throws IOException {
                 XSort.mergeSortedFiles(XSort.sortInBatch(input),
                         output);
-        }
-
-        /**
-         * Sort a list and save it to a temporary file
-         *
-         * @return the file containing the sorted data
-         * @param tmplist
-         *                data to be sorted
-         * @param cmp
-         *                string comparator
-         * @param cs
-         *                charset to use for output (can use
-         *                Charset.defaultCharset())
-         * @param tmpdirectory
-         *                location of the temporary files (set to null for
-         *                default location)
-         * @throws IOException
-         */
-        public static File sortAndSave(List<String> tmplist,
-                Comparator<String> cmp, Charset cs, File tmpdirectory)
-                throws IOException {
-                return sortAndSave(tmplist, cmp, cs, tmpdirectory, false, false);
         }
 
         /**
@@ -610,8 +419,7 @@ public class XSort {
                 final int numHeader, final boolean usegzip) throws IOException {
                 List<File> files = new ArrayList<File>();
                 long blocksize = estimateBestSizeOfBlocks(datalength,
-                        maxtmpfiles, maxMemory);// in
-                // bytes
+                        maxtmpfiles, maxMemory); /* in bytes */
 
                 try {
                         List<String> tmplist = new ArrayList<String>();
