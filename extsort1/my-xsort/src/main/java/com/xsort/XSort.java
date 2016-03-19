@@ -22,124 +22,86 @@ import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-/**
- * Goal: offer a generic external-memory sorting program in Java.
- *
- * It must be : - hackable (easy to adapt) - scalable to large files - sensibly
- * efficient.
- *
- * This software is in the public domain.
- *
- * Usage: java com/google/code/externalsorting/XSort somefile.txt out.txt
- *
- * You can change the default maximal number of temporary files with the -t
- * flag: java com/google/code/externalsorting/XSort somefile.txt out.txt
- * -t 3
- *
- * For very large files, you might want to use an appropriate flag to allocate
- * more memory to the Java VM: java -Xms2G
- * com/google/code/externalsorting/XSort somefile.txt out.txt
- *
- * By (in alphabetical order) Philippe Beaudoin, Eleftherios Chetzakis, Jon
- * Elsas, Christan Grant, Daniel Haran, Daniel Lemire, Sugumaran Harikrishnan,
- * Amit Jain, Thomas Mueller, Jerry Yang, First published: April 2010 originally posted at
- * http://lemire.me/blog/archives/2010/04/01/external-memory-sorting-in-java/
- */
 public class XSort {
 
 
-	/* String size estimation settings - BEGIN */
-	private static int OBJ_HEADER;
-	private static int ARR_HEADER;
+	/* Runtime Parameters - BEGIN */
+	// Java Object header size
+	private static int OBJ_HDR;
+	// Java Canal header size
+	private static int ARR_HDR;
+	// Java Default INT Field Storage size
 	private static int INT_FIELDS = 12;
-	private static int OBJ_REF;
+	// JVM Pointer Storage size
+	private static int OBJ_PTR;
+	// Total size of Object Overhead
 	private static int OBJ_OVERHEAD;
-	private static boolean IS_64_BIT_JVM;
+	// 64-bit JVM flag
+	private static boolean FLAG_64_BIT;
+
 	static {
-		// By default we assume 64 bit JVM
-		// (defensive approach since we will get
-		// larger estimations in case we are not sure)
-		IS_64_BIT_JVM = true;
-		// check the system property "sun.arch.data.model"
-		// not very safe, as it might not work for all JVM implementations
-		// nevertheless the worst thing that might happen is that the JVM is 32bit
-		// but we assume its 64bit, so we will be counting a few extra bytes per string object
-		// no harm done here since this is just an approximation.
+		// Assuming 64-bit initially
+		FLAG_64_BIT = true;
+		// Then checking system at runtime for actual architecture
+		// NOTE: Even though some JVM implementations do not support
+		// the property below, at worst case we slightly overcount
+		// the approximate size of each string object, which is ok
 		String arch = System.getProperty("sun.arch.data.model");
 		if (arch != null) {
 			if (arch.indexOf("32") != -1) {
-				// If exists and is 32 bit then we assume a 32bit JVM
-				IS_64_BIT_JVM = false;
+				FLAG_64_BIT = false;
 			}
 		}
-		// The sizes below are a bit rough as we don't take into account
-		// advanced JVM options such as compressed oops
-		// however if our calculation is not accurate it'll be a bit over
-		// so there is no danger of an out of memory error because of this.
-		OBJ_HEADER = IS_64_BIT_JVM ? 16 : 8;
-		ARR_HEADER = IS_64_BIT_JVM ? 24 : 12;
-		OBJ_REF = IS_64_BIT_JVM ? 8 : 4;
-		OBJ_OVERHEAD = OBJ_HEADER + INT_FIELDS + OBJ_REF + ARR_HEADER;
+		// Now calculating the rest of the runtime parameters.
+		OBJ_HDR = FLAG_64_BIT ? 16 : 8;
+		ARR_HDR = FLAG_64_BIT ? 24 : 12;
+		OBJ_PTR = FLAG_64_BIT ? 8  : 4;
+		OBJ_OVERHEAD = OBJ_HDR + INT_FIELDS + OBJ_PTR + ARR_HDR;
+		// In the case of byte inaccuracy we are still ok
+		// since we can only overcount which means that we
+		// still avoid OutOfMemoryErrors.
 	}
-
-	/**
-	 * Estimates the size of a {@link String} object in bytes.
-	 *
-	 * @param s The string to estimate memory footprint.
-	 * @return The <strong>estimated</strong> size in bytes.
-	 */
-	public static long estimatedSizeOf(String s) {
-		return (s.length() * 2) + OBJ_OVERHEAD;
-	}
-	/* String size estimation settings - END */
+	/* Runtime Parameters - END */
 
 	/* XSort - BEGIN */
+	/* == DEFAULT CONFIGURATION - BEGIN == */
+	// CONFIG - Maximum number of temporary files allowed
+        public static final int DEFAULTMAXTEMPFILES = 1024;
+	// CONFIG - default comparator between strings
+        public static final Comparator<String> DEFAULTCMP
+		= new Comparator<String>() {
+                @Override
+                public int compare(String s1, String s2)
+		{ return s1.compareTo(s2); }
+        };
+	/* == DEFAULT CONFIGURATION - END == */
 
-        /**
-         * This method calls the garbage collector and then returns the free
-         * memory. This avoids problems with applications where the GC hasn't
-         * reclaimed memory and reports no available memory.
-         *
-         * @return available memory
-         */
-        public static long estimateAvailableMemory() {
-                System.gc();
-                return Runtime.getRuntime().freeMemory();
+	/* == ESTIMATION HELPER FUNCTIONS - BEGIN == */
+	// Estimate the size of given String in bytes
+	public static long estSizeOf(String s)
+	{ return OBJ_OVERHEAD + (s.length() * 2); }
+
+	// Initiate GC in an attempt to avoid OutOfMemoryErrors
+	// and return available memory
+        public static long estAvailMem()
+	{ System.gc(); return Runtime.getRuntime().freeMemory(); }
+
+	// Estimate block size when dividing file into blocks.
+	// Effect: Small files -> Spit out many intermediate files
+	// Effect: Big files   -> Use a lot of memory
+        public static long estimateBestSizeOfBlocks(final long fileSize,
+			final int maxTmpFiles, final long maxMem) {
+		// Attempt to open less MaxTmpFiles (may give OOM error)
+                long blockSize = fileSize / maxTmpFiles
+                        + (fileSize % maxTmpFiles == 0 ? 0 : 1);
+
+		// If block less than halft the available memory, grow it
+                return (blockSize < maxMem / 2) ? maxMem / 2 : blockSize;
         }
+	/* == ESTIMATION HELPER FUNCTIONS - END == */
 
         /**
-         * we divide the file into small blocks. If the blocks are too small, we
-         * shall create too many temporary files. If they are too big, we shall
-         * be using too much memory.
-         *
-         * @param sizeoffile
-         *                how much data (in bytes) can we expect
-         * @param maxtmpfiles
-         *                how many temporary files can we create (e.g., 1024)
-         * @param maxMemory
-         *                Maximum memory to use (in bytes)
-         * @return the estimate
-         */
-        public static long estimateBestSizeOfBlocks(final long sizeoffile,
-                final int maxtmpfiles, final long maxMemory) {
-                // we don't want to open up much more than maxtmpfiles temporary
-                // files, better run
-                // out of memory first.
-                long blocksize = sizeoffile / maxtmpfiles
-                        + (sizeoffile % maxtmpfiles == 0 ? 0 : 1);
-
-                // on the other hand, we don't want to create many temporary
-                // files
-                // for naught. If blocksize is smaller than half the free
-                // memory, grow it.
-                if (blocksize < maxMemory / 2) {
-                        blocksize = maxMemory / 2;
-                }
-                return blocksize;
-        }
-
-        /**
-         * This merges several BinaryFileBuffer to an output writer.
+         * This merges several BFC to an output writer.
          *
          * @param fbw
          *                A buffer where we write the data.
@@ -157,49 +119,49 @@ public class XSort {
          */
         public static int mergeSortedFiles(BufferedWriter fbw,
                 final Comparator<String> cmp, boolean distinct,
-                List<BinaryFileBuffer> buffers) throws IOException {
-                PriorityQueue<BinaryFileBuffer> pq = new PriorityQueue<BinaryFileBuffer>(
-                        11, new Comparator<BinaryFileBuffer>() {
+                List<BFC> buffers) throws IOException {
+                PriorityQueue<BFC> pq = new PriorityQueue<BFC>(
+                        11, new Comparator<BFC>() {
                                 @Override
-                                public int compare(BinaryFileBuffer i,
-                                        BinaryFileBuffer j) {
-                                        return cmp.compare(i.peek(), j.peek());
+                                public int compare(BFC i,
+                                        BFC j) {
+                                        return cmp.compare(i.access(), j.access());
                                 }
                         });
-                for (BinaryFileBuffer bfb : buffers)
+                for (BFC bfb : buffers)
                         if (!bfb.empty())
                                 pq.add(bfb);
                 int rowcounter = 0;
                 try {
                         if(!distinct) {
                             while (pq.size() > 0) {
-                                    BinaryFileBuffer bfb = pq.poll();
-                                    String r = bfb.pop();
+                                    BFC bfb = pq.poll();
+                                    String r = bfb.flush();
                                     fbw.write(r);
                                     fbw.newLine();
                                     ++rowcounter;
                                     if (bfb.empty()) {
-                                            bfb.fbr.close();
+                                            bfb.close();
                                     } else {
                                             pq.add(bfb); // add it back
                                     }
                             }
                         } else {                                String lastLine = null;
                             if(pq.size() > 0) {
-                     			BinaryFileBuffer bfb = pq.poll();
-                     			lastLine = bfb.pop();
+                     			BFC bfb = pq.poll();
+                     			lastLine = bfb.flush();
                      			fbw.write(lastLine);
                      			fbw.newLine();
                      			++rowcounter;
                      			if (bfb.empty()) {
-                     				bfb.fbr.close();
+                     				bfb.close();
                      			} else {
                      				pq.add(bfb); // add it back
                      			}
                      		}
                             while (pq.size() > 0) {
-                    			BinaryFileBuffer bfb = pq.poll();
-                    			String r = bfb.pop();
+                    			BFC bfb = pq.poll();
+                    			String r = bfb.flush();
                     			// Skip duplicate lines
                     			if  (cmp.compare(r, lastLine) != 0) {
                     				fbw.write(r);
@@ -208,7 +170,7 @@ public class XSort {
                     			}
                     			++rowcounter;
                     			if (bfb.empty()) {
-                    				bfb.fbr.close();
+                    				bfb.close();
                     			} else {
                     				pq.add(bfb); // add it back
                     			}
@@ -216,7 +178,7 @@ public class XSort {
                         }
                 } finally {
                         fbw.close();
-                        for (BinaryFileBuffer bfb : pq)
+                        for (BFC bfb : pq)
                                 bfb.close();
                 }
                 return rowcounter;
@@ -239,7 +201,7 @@ public class XSort {
 		boolean distinct = false;
 		boolean append = false;
 		boolean usegzip = false;
-		Comparator<String> cmp = defaultcmp;
+		Comparator<String> cmp = DEFAULTCMP;
                 return mergeSortedFiles(files, outputfile, cmp,
 				cs, distinct, append, usegzip);
         }
@@ -273,7 +235,7 @@ public class XSort {
         public static int mergeSortedFiles(List<File> files, File outputfile,
                 final Comparator<String> cmp, Charset cs, boolean distinct,
                 boolean append, boolean usegzip) throws IOException {
-                ArrayList<BinaryFileBuffer> bfbs = new ArrayList<BinaryFileBuffer>();
+                ArrayList<BFC> bfbs = new ArrayList<BFC>();
                 for (File f : files) {
                         final int BUFFERSIZE = 2048;
                         InputStream in = new FileInputStream(f);
@@ -288,7 +250,7 @@ public class XSort {
                                         in, cs));
                         }
 
-                        BinaryFileBuffer bfb = new BinaryFileBuffer(br);
+                        BFC bfb = new BFC(br);
                         bfbs.add(bfb);
                 }
                 BufferedWriter fbw = new BufferedWriter(new OutputStreamWriter(
@@ -297,23 +259,6 @@ public class XSort {
                 for (File f : files)
                         f.delete();
                 return rowcounter;
-        }
-
-        /**
-         * This sorts a file (input) to an output file (output) using default
-         * parameters
-         *
-         * @param input
-         *                source file
-         *
-         * @param output
-         *                output file
-         * @throws IOException
-         */
-        public static void sort(final File input, final File output)
-                throws IOException {
-                XSort.mergeSortedFiles(XSort.sortInBatch(input),
-                        output);
         }
 
         /**
@@ -386,7 +331,7 @@ public class XSort {
         }
 
         /**
-         * @param fbr
+         * @param br
          *                data source
          * @param datalength
          *                estimated data volume (in bytes)
@@ -412,7 +357,7 @@ public class XSort {
          * @return a list of temporary flat files
          * @throws IOException
          */
-        public static List<File> sortInBatch(final BufferedReader fbr,
+        public static List<File> sortInBatch(final BufferedReader br,
                 final long datalength, final Comparator<String> cmp,
                 final int maxtmpfiles, long maxMemory, final Charset cs,
                 final File tmpdirectory, final boolean distinct,
@@ -429,7 +374,7 @@ public class XSort {
                                 while (line != null) {
                                         long currentblocksize = 0;// in bytes
                                         while ((currentblocksize < blocksize)
-                                                && ((line = fbr.readLine()) != null)) {
+                                                && ((line = br.readLine()) != null)) {
                                                 // as long as you have enough
                                                 // memory
                                                 if (counter < numHeader) {
@@ -437,7 +382,7 @@ public class XSort {
                                                         continue;
                                                 }
                                                 tmplist.add(line);
-                                                currentblocksize += estimatedSizeOf(line);
+                                                currentblocksize += estSizeOf(line);
                                         }
                                         files.add(sortAndSave(tmplist, cmp, cs,
                                                 tmpdirectory, distinct, usegzip));
@@ -451,7 +396,7 @@ public class XSort {
                                 }
                         }
                 } finally {
-                        fbr.close();
+                        br.close();
                 }
                 return files;
         }
@@ -461,71 +406,46 @@ public class XSort {
          */
         public static List<File> sortInBatch(File file) throws IOException {
 		Charset cs = Charset.defaultCharset();
-		Comparator<String> cmp = defaultcmp;
+		Comparator<String> cmp = DEFAULTCMP;
 		int maxtmpfiles = DEFAULTMAXTEMPFILES;
 		File tmpdirectory = null;
 		boolean distinct = false;
 		int numHeader = 0;
 		boolean usegzip = false;
-		BufferedReader fbr = new BufferedReader(new InputStreamReader(
+		BufferedReader br = new BufferedReader(new InputStreamReader(
 			new FileInputStream(file), cs));
-		return sortInBatch(fbr, file.length(), cmp, maxtmpfiles,
-			estimateAvailableMemory(), cs, tmpdirectory, distinct,
+		return sortInBatch(br, file.length(), cmp, maxtmpfiles,
+			estAvailMem(), cs, tmpdirectory, distinct,
 			numHeader, usegzip);
         }
-
-        /**
-         * default comparator between strings.
-         */
-        public static Comparator<String> defaultcmp = new Comparator<String>() {
-                @Override
-                public int compare(String r1, String r2) {
-                        return r1.compareTo(r2);
-                }
-        };
-
-        /**
-         * Default maximal number of temporary files allowed.
-         */
-        public static final int DEFAULTMAXTEMPFILES = 1024;
 	/* XSort - END */
 }
 
-/**
- * This is essentially a thin wrapper on top of a BufferedReader... which keeps
- * the last line in memory.
- *
- * @author Daniel Lemire
+/*
+ * BFC - Buffered File Cache:
+ * An abstraction based on BufferedReader
+ * which caches the last line read.
  */
-final class BinaryFileBuffer {
-        public BinaryFileBuffer(BufferedReader r) throws IOException {
-                this.fbr = r;
-                reload();
-        }
-        public void close() throws IOException {
-                this.fbr.close();
-        }
-
-        public boolean empty() {
-                return this.cache == null;
-        }
-
-        public String peek() {
-                return this.cache;
-        }
-
-        public String pop() throws IOException {
-                String answer = peek().toString();// make a copy
-                reload();
-                return answer;
-        }
-
-        private void reload() throws IOException {
-                this.cache = this.fbr.readLine();
-        }
-
-        public BufferedReader fbr;
-
+final class BFC {
+        public BufferedReader br;
         private String cache;
 
+        public BFC(BufferedReader r) throws IOException
+	{ this.br = r; load(); }
+
+        public void close() throws IOException
+	{ this.br.close(); }
+
+        public boolean empty()
+	{ return this.cache == null; }
+
+        public String access()
+	{ return this.cache; }
+
+        public String flush() throws IOException
+	{ String retval = access().toString(); load(); return retval; }
+
+        private void load() throws IOException
+	{ this.cache = this.br.readLine(); }
 }
+
