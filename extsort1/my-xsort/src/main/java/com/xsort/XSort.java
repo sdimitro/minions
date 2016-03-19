@@ -1,26 +1,9 @@
 package com.xsort;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.util.*;
+import java.util.zip.*;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.zip.Deflater;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 public class XSort {
 
@@ -75,9 +58,7 @@ public class XSort {
                 public int compare(String s1, String s2)
 		{ return s1.compareTo(s2); }
         };
-	// CONFIG - Character set
-	public static final Charset DEFAULTCS = Charset.defaultCharset();
-	// CONFIG - Direcotry for intermediate files (null means binary root) 
+	// CONFIG - Directory for intermediate files (null means binary root) 
 	public static final File DEFAULTTMPDIR = null;
 	// CONFIG - Gzip flag (set true for enabling compression)
 	public static final boolean GZIPFLAG = false;
@@ -132,8 +113,7 @@ public class XSort {
                         };
 		}
                 BufferedWriter bw =
-			new BufferedWriter(new OutputStreamWriter(fos,
-						                  DEFAULTCS));
+			new BufferedWriter(new OutputStreamWriter(fos));
                 try {
 		    for (String r : lines)
 		    { bw.write(r); bw.newLine(); }
@@ -155,7 +135,7 @@ public class XSort {
                 List<File> files = new ArrayList<File>();
 
 		BufferedReader br = new BufferedReader(new InputStreamReader(
-			new FileInputStream(file), DEFAULTCS));
+			new FileInputStream(file)));
 		long maxMemory = estAvailMem();
                 long blockSize = estBestBlockSize(file.length(),
 				DEFAULTMAXTEMPFILES, maxMemory);
@@ -237,19 +217,18 @@ public class XSort {
                 for (File f : files) {
                         InputStream is = new FileInputStream(f);
                         BufferedReader br = new BufferedReader(new InputStreamReader(
-							is, DEFAULTCS));
+							is));
                         if (GZIPFLAG) {
                                 br = new BufferedReader(
                                         new InputStreamReader(
                                                 new GZIPInputStream(is,
-                                                        ZIPBUFFERSIZE),
-						DEFAULTCS));
+                                                        ZIPBUFFERSIZE)));
                         }
 			bfcs.add(new BFC(br));
                 }
 
                 BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
-                        new FileOutputStream(out, APPENDFLAG), DEFAULTCS));
+                        new FileOutputStream(out, APPENDFLAG)));
                 int rowcounter = mergeByBFCs(bw, bfcs);
                 for (File f : files) { f.delete(); }
                 return rowcounter;
