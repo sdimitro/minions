@@ -64,16 +64,27 @@ public class XSort {
 	/* Runtime Parameters - END */
 
 	/* XSort - BEGIN */
+
 	/* == DEFAULT CONFIGURATION - BEGIN == */
 	// CONFIG - Maximum number of temporary files allowed
         public static final int DEFAULTMAXTEMPFILES = 1024;
-	// CONFIG - default comparator between strings
+	// CONFIG - Comparator between strings
         public static final Comparator<String> DEFAULTCMP
 		= new Comparator<String>() {
                 @Override
                 public int compare(String s1, String s2)
 		{ return s1.compareTo(s2); }
         };
+	// CONFIG - Character set
+	public static final Charset DEFAULTCS = Charset.defaultCharset();
+	// CONFIG - Direcotry for intermediate files (null means binary root) 
+	public static final File DEFAULTTMPDIR = null;
+	// CONFIG - Gzip flag (set true for enabling compression)
+	public static final boolean GZIPFLAG = false;
+	// CONFIG - If Gzip enabled, set ZIP Bufffer size
+        public static final int ZIPBUFFERSIZE = 2048;
+	// CONFIG - Append to original flag
+	public static final boolean APPENDFLAG = false;
 	/* == DEFAULT CONFIGURATION - END == */
 
 	/* == ESTIMATION HELPER FUNCTIONS - BEGIN == */
@@ -89,7 +100,7 @@ public class XSort {
 	// Estimate block size when dividing file into blocks.
 	// Effect: Small files -> Spit out many intermediate files
 	// Effect: Big files   -> Use a lot of memory
-        public static long estimateBestSizeOfBlocks(final long fileSize,
+        public static long estBestBlockSize(final long fileSize,
 			final int maxTmpFiles, final long maxMem) {
 		// Attempt to open less MaxTmpFiles (may give OOM error)
                 long blockSize = fileSize / maxTmpFiles
@@ -197,13 +208,8 @@ public class XSort {
          */
         public static int mergeSortedFiles(List<File> files, File outputfile)
                 throws IOException {
-		Charset cs = Charset.defaultCharset();
-		boolean distinct = false;
-		boolean append = false;
-		boolean usegzip = false;
-		Comparator<String> cmp = DEFAULTCMP;
-                return mergeSortedFiles(files, outputfile, cmp,
-				cs, distinct, append, usegzip);
+                return mergeSortedFiles(files, outputfile, DEFAULTCMP,
+				DEFAULTCS, false, APPENDFLAG, GZIPFLAG);
         }
 
         /**
@@ -261,162 +267,74 @@ public class XSort {
                 return rowcounter;
         }
 
-        /**
-         * Sort a list and save it to a temporary file
-         *
-         * @return the file containing the sorted data
-         * @param tmplist
-         *                data to be sorted
-         * @param cmp
-         *                string comparator
-         * @param cs
-         *                charset to use for output (can use
-         *                Charset.defaultCharset())
-         * @param tmpdirectory
-         *                location of the temporary files (set to null for
-         *                default location)
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded.
-         * @param usegzip
-         *                set to true if you are using gzip compression for the
-         *                temporary files
-         * @throws IOException
-         */
-        public static File sortAndSave(List<String> tmplist,
-                Comparator<String> cmp, Charset cs, File tmpdirectory,
-                boolean distinct, boolean usegzip) throws IOException {
-                Collections.sort(tmplist, cmp);// In Java8, we can do tmplist = tmplist.parallelStream().sorted(cmp).collect(Collectors.toCollection(ArrayList<String>::new));
-                File newtmpfile = File.createTempFile("sortInBatch",
-                        "flatfile", tmpdirectory);
-                newtmpfile.deleteOnExit();
-                OutputStream out = new FileOutputStream(newtmpfile);
-                int ZIPBUFFERSIZE = 2048;
-                if (usegzip)
+        public static File saveSortedTemp(List<String> lines) throws IOException {
+		// Sort and save intermediate file
+
+                // In Java 8, we can do lines = lines.parallelStream().sorted(cmp).collect(Collectors.toCollection(ArrayList<String>::new));
+		Collections.sort(lines, DEFAULTCMP);
+		//
+                File tmpFile = File.createTempFile("intermediate",
+                        "flat", DEFAULTTMPDIR);
+                tmpFile.deleteOnExit();
+
+                OutputStream out = new FileOutputStream(tmpFile);
+                if (GZIPFLAG) {
                         out = new GZIPOutputStream(out, ZIPBUFFERSIZE) {
                                 {
                                         this.def.setLevel(Deflater.BEST_SPEED);
                                 }
                         };
-                BufferedWriter fbw = new BufferedWriter(new OutputStreamWriter(
-                        out, cs));
+		}
+                BufferedWriter bw =
+			new BufferedWriter(new OutputStreamWriter(out, DEFAULTCS));
                 try {
-                        if (!distinct) {
-                            for (String r : tmplist) {
-                                        fbw.write(r);
-                                        fbw.newLine();
-                            }
-                        } else {
-                    		String lastLine = null;
-                    		Iterator<String> i = tmplist.iterator();
-                    		if(i.hasNext()) {
-                    			lastLine = i.next();
-                    			fbw.write(lastLine);
-                  				fbw.newLine();
-                    		}
-                    		while (i.hasNext()) {
-                    			String r = i.next();
-                    			// Skip duplicate lines
-                    			if (cmp.compare(r, lastLine) != 0) {
-                    				fbw.write(r);
-                    				fbw.newLine();
-                    				lastLine = r;
-                    			}
-                    		}
-                        }
-                } finally {
-                        fbw.close();
-                }
-                return newtmpfile;
+		    for (String r : lines)
+		    { bw.write(r); bw.newLine(); }
+                } finally { bw.close(); }
+                return tmpFile;
         }
 
-        /**
-         * @param br
-         *                data source
-         * @param datalength
-         *                estimated data volume (in bytes)
-         * @param cmp
-         *                string comparator
-         * @param maxtmpfiles
-         *                maximal number of temporary files
-         * @param maxMemory
-         *                maximum amount of memory to use (in bytes)
-         * @param cs
-         *                character set to use (can use
-         *                Charset.defaultCharset())
-         * @param tmpdirectory
-         *                location of the temporary files (set to null for
-         *                default location)
-         * @param distinct
-         *                Pass <code>true</code> if duplicate lines should be
-         *                discarded.
-         * @param numHeader
-         *                number of lines to preclude before sorting starts
-         * @param usegzip
-         *                use gzip compression for the temporary files
-         * @return a list of temporary flat files
-         * @throws IOException
-         */
-        public static List<File> sortInBatch(final BufferedReader br,
-                final long datalength, final Comparator<String> cmp,
-                final int maxtmpfiles, long maxMemory, final Charset cs,
-                final File tmpdirectory, final boolean distinct,
-                final int numHeader, final boolean usegzip) throws IOException {
+
+        public static List<File> split(File file) throws IOException {
+		// Split file to intermediate sorted files
+		// by reading the given file line by line.
+		// Before reading the file check how much
+		// available memory you have and create
+		// chucks according to it. Keep only one
+		// chuck in memory at a time and also keep
+		// track of all the chunk (flat file) names
+		// in order to return them for future merging
+
                 List<File> files = new ArrayList<File>();
-                long blocksize = estimateBestSizeOfBlocks(datalength,
-                        maxtmpfiles, maxMemory); /* in bytes */
+
+		BufferedReader br = new BufferedReader(new InputStreamReader(
+			new FileInputStream(file), DEFAULTCS));
+		long maxMemory = estAvailMem();
+                long blockSize = estBestBlockSize(file.length(),
+				DEFAULTMAXTEMPFILES, maxMemory);
 
                 try {
-                        List<String> tmplist = new ArrayList<String>();
+                        List<String> lines = new ArrayList<String>();
                         String line = "";
                         try {
-                                int counter = 0;
                                 while (line != null) {
-                                        long currentblocksize = 0;// in bytes
-                                        while ((currentblocksize < blocksize)
+                                        long currentBlockSize = 0;
+                                        while ((currentBlockSize < blockSize)
                                                 && ((line = br.readLine()) != null)) {
-                                                // as long as you have enough
-                                                // memory
-                                                if (counter < numHeader) {
-                                                        counter++;
-                                                        continue;
-                                                }
-                                                tmplist.add(line);
-                                                currentblocksize += estSizeOf(line);
+                                                lines.add(line);
+                                                currentBlockSize += estSizeOf(line);
                                         }
-                                        files.add(sortAndSave(tmplist, cmp, cs,
-                                                tmpdirectory, distinct, usegzip));
-                                        tmplist.clear();
+                                        files.add(saveSortedTemp(lines));
+                                        lines.clear();
                                 }
-                        } catch (EOFException oef) {
-                                if (tmplist.size() > 0) {
-                                        files.add(sortAndSave(tmplist, cmp, cs,
-                                                tmpdirectory, distinct, usegzip));
-                                        tmplist.clear();
+                        } catch (EOFException eofe) {
+                                if (lines.size() > 0) {
+                                        files.add(saveSortedTemp(lines));
+                                        lines.clear();
                                 }
                         }
-                } finally {
-                        br.close();
-                }
+                } finally { br.close(); }
                 return files;
-        }
-
-        /**
-	 * [STD]
-         */
-        public static List<File> sortInBatch(File file) throws IOException {
-		Charset cs = Charset.defaultCharset();
-		Comparator<String> cmp = DEFAULTCMP;
-		int maxtmpfiles = DEFAULTMAXTEMPFILES;
-		File tmpdirectory = null;
-		boolean distinct = false;
-		int numHeader = 0;
-		boolean usegzip = false;
-		BufferedReader br = new BufferedReader(new InputStreamReader(
-			new FileInputStream(file), cs));
-		return sortInBatch(br, file.length(), cmp, maxtmpfiles,
-			estAvailMem(), cs, tmpdirectory, distinct,
-			numHeader, usegzip);
         }
 	/* XSort - END */
 }
