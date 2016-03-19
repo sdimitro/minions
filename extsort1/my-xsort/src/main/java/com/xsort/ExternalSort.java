@@ -1,6 +1,5 @@
 package com.xsort;
 
-// filename: ExternalSort.java
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.EOFException;
@@ -53,7 +52,7 @@ public class ExternalSort {
          */
         public static void displayUsage() {
                 System.out
-                        .println("java com.google.externalsorting.ExternalSort inputfile outputfile");
+                        .println("java com.xsort.ExternalSort inputfile outputfile");
                 System.out.println("Flags are:");
                 System.out.println("-v or --verbose: verbose output");
                 System.out.println("-d or --distinct: prune duplicate lines");
