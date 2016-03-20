@@ -11,6 +11,25 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>       
     <java.target.version>1.8</java.target.version>                        
   </properties>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.5</version>
+          <configuration>
+	  <!-- <verbose>true</verbose> -->
+	    <source>1.8</source>
+	    <target>1.8</target>
+          </configuration>
+        </plugin>
+    </plugins>
+    </pluginManagement>
+  </build>
+
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>

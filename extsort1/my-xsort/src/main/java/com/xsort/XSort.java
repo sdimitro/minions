@@ -2,6 +2,7 @@ package com.xsort;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.*;
 import java.util.zip.*;
 import java.nio.charset.Charset;
 
@@ -95,11 +96,10 @@ public class XSort {
 	/* == SPLIT TO INTERMEDIATE AND SORT - BEGIN == */
         private static File saveSortedTemp(List<String> lines)
 		throws IOException {
-		// Sort and save intermediate file
 
-                // In Java 8, we can do lines = lines.parallelStream().sorted(cmp).collect(Collectors.toCollection(ArrayList<String>::new));
-		Collections.sort(lines, DEFAULTCMP);
-		//
+                lines = lines.parallelStream().sorted(DEFAULTCMP).collect(
+				Collectors.toCollection(ArrayList<String>::new));
+
                 File tmpFile = File.createTempFile("intermediate",
                         "flat", DEFAULTTMPDIR);
                 tmpFile.deleteOnExit();
