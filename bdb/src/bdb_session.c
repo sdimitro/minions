@@ -7,7 +7,7 @@ make_bdb_session(void)
 {
 	struct bdb_session *b;
 
-       	b = xmalloc(sizeof(struct bdb_session));
+	b = xmalloc(sizeof(struct bdb_session));
 	b->pid = -1;
 	b->verbose = 0;
 	b->type = NONE;
