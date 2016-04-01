@@ -6,6 +6,7 @@ SRCDIR    = src
 
 C_SRCS    = ${SRCDIR}/bdb_utils.c   \
 	    ${SRCDIR}/bdb_session.c \
+	    ${SRCDIR}/bdb_operations.c \
 	    ${SRCDIR}/bdb_main.c
 
 C_HDRS    = ${SRCDIR}/bdb_utils.h   \
