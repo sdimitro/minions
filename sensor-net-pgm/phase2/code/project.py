@@ -1,5 +1,5 @@
 from collections import defaultdict
-import abc
+import itertools
 
 from sklearn import linear_model
 import numpy as np
@@ -50,49 +50,21 @@ def write_mae_data(filename, data):
         f.write("\n".join(map(lmbd, sorted(data))))
         f.write("\n")
 
+class ActiveInferenceWindow(object):
+
+    def generate_windows(self, limit, window_size, n):
+        nums = itertools.cycle(range(limit))
+        return [[next(nums) for _ in range(window_size)] for _ in range(n)]
+
 #### Modeling
 
 class SensorModel:
-    """ An Abstract class for Sensor Models """
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def train(self, train_data):
-        return
-
-    @abc.abstractmethod
-    def infer_window(self, test_data, budget):
-        return
-
-    @abc.abstractmethod
-    def infer_var(self, test_data, budget):
-        return
 
     def get_num_sensors(self, readings):
         return len(readings)
     
     def get_num_timestamps(self, readings):
         return len(readings[0])
-
-    def generate_window(self, start, limit, window_size):
-        res = []
-        ids_left = window_size
-        current_id = start
-        while ids_left > 0:
-            res.append(current_id % limit)
-            ids_left -= 1
-            current_id += 1
-        return res, (current_id % limit)
-
-    def generate_windows(self, num_timestamps, num_sensors, window_size):
-        windows = []
-        window_start = 0
-        for i in range(num_timestamps):
-            window, window_start = self.generate_window(window_start,
-                                                        num_sensors,
-                                                        window_size)
-            windows.append(window)
-        return windows
 
     def infer(self, data, whitelists, func):
         transposed_data = data.T
@@ -156,7 +128,8 @@ class HourLevelModel(SensorModel):
         self.prev_state = defaultdict(lambda: False)
         num_sensors = self.get_num_sensors(test_data)
         num_timestamps = self.get_num_timestamps(test_data)
-        windows = self.generate_windows(num_timestamps, num_sensors, budget)
+        a = ActiveInferenceWindow()
+        windows = a.generate_windows(num_sensors, budget, num_timestamps)
         return self.infer(test_data, windows, self.infer_timestamp)
 
     def infer_var(self, test_data, budget):
@@ -271,7 +244,8 @@ class DayLevelModel(HourLevelModel):
         num_sensors = self.get_num_sensors(test_data)
         num_timestamps = self.get_num_timestamps(test_data)
         timestamps = generate_timestamps(num_timestamps)
-        windows = self.generate_windows(num_timestamps, num_sensors, budget)
+        a = ActiveInferenceWindow()
+        windows = a.generate_windows(num_sensors, budget, num_timestamps)
         return self.infer(test_data, timestamps, windows)
 
     def infer_var(self, test_data, budget):
