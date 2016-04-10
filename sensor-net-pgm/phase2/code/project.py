@@ -208,42 +208,31 @@ class DayLevelModel(HourLevelModel):
             rv.estimate_learning_params(next_data)
 
     def train(self, train_data):
-        # [mean, variance, entries, num_entries, b_0, b_1, residual]
-        # self.model = defaultdict(lambda: [0, 0, [], 0, 0, 0, 0])
         self.model = defaultdict(RandomVariable)
         timestamps = generate_timestamps(self.get_num_timestamps(train_data))
         for sensor_id, sensor_readings in enumerate(train_data):
             self.populate_sensor_rvs(sensor_id, sensor_readings, timestamps)
-        self.model = {k: v.all_data_() for k, v in self.model.items()}
-
 
     def infer_timestamp(self, sensor_data, timestamp, whitelist):
         num_sensors = self.get_num_sensors(sensor_data)
         res = np.zeros(num_sensors)
         for sensor in range(num_sensors):
-            index = self.model_index(sensor, timestamp)
+            sensor_rv = self.model_variable(sensor, timestamp)
 
             if self.to_be_observed(sensor, whitelist):
                 res[sensor] = sensor_data[sensor]
-                self.prev_state[sensor] = [res[sensor], 0]
+                self.prev_snapshot[sensor] = RandomVariable()
+                self.prev_snapshot[sensor].observe(sensor_data[sensor])
 
-            elif not self.prev_state[sensor]:
-                res[sensor] = self.model[index][0]
-                self.prev_state[sensor] = [res[sensor],
-                                           self.model[index][1]]
+            elif not self.prev_snapshot[sensor]:
+                res[sensor] = sensor_rv.mean
+                # Same Object pointer for both
+                prev_rv = self.prev_snapshot[sensor] = RandomVariable()
+                prev_rv.mean = sensor_rv.mean
+                prev_rv.variance = sensor_rv.variance
             else:
-                b_0 = self.model[index][4]
-                b_1 = self.model[index][5]
-                sigma_sq = self.model[index][6]
-
-                prev_mean = self.prev_state[sensor][0]
-                prev_sigma_sq = self.prev_state[sensor][1]
-
-                mean = b_0 + b_1 * prev_mean
-                var = sigma_sq + (b_1 ** 2) * prev_sigma_sq
-
-                res[sensor] = mean
-                self.prev_state[sensor] = [mean, var]
+                res[sensor] = self.infer_current_state(sensor_rv,
+                                                       self.prev_snapshot[sensor])
         return res
 
     def infer(self, data, timestamps, whitelists):
@@ -257,7 +246,7 @@ class DayLevelModel(HourLevelModel):
 
 
     def infer_window(self, test_data, budget):
-        self.prev_state = defaultdict(lambda: False)
+        self.prev_snapshot = defaultdict(lambda: False)
         num_sensors = self.get_num_sensors(test_data)
         num_timestamps = self.get_num_timestamps(test_data)
         timestamps = generate_timestamps(num_timestamps)
@@ -266,7 +255,7 @@ class DayLevelModel(HourLevelModel):
         return self.infer(test_data, timestamps, windows)
 
     def infer_var(self, test_data, budget):
-        self.prev_state = defaultdict(lambda: False)
+        self.prev_snapshot = defaultdict(lambda: False)
         transposed_data = test_data.T
         transposed_res = np.zeros_like(transposed_data)
         num_sensors = self.get_num_sensors(test_data)
@@ -275,14 +264,14 @@ class DayLevelModel(HourLevelModel):
 
         temp_hsh = {}
         for sensor in range(num_sensors):
-            index = self.model_index(sensor, timestamp)
-            temp_hsh[sensor] = self.model[index][1]
+            temp_hsh[sensor] = self.model_variable(sensor, timestamp).variance
+
         whitelist = sorted(temp_hsh, key=temp_hsh.get, reverse=True)[:budget]
 
         for i, sensor_data in enumerate(transposed_data):
             transposed_res[i] = self.infer_timestamp(sensor_data, timestamp, whitelist)
             timestamp = (timestamp + 0.5) % 24
-            temp_hsh = {k: v[1] for k, v in self.prev_state.items()}
+            temp_hsh = {k: v.variance for k, v in self.prev_snapshot.items()}
             whitelist = sorted(temp_hsh, key=temp_hsh.get, reverse=True)[:budget]
         return transposed_res.T
 
