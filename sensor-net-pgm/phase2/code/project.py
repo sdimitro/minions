@@ -177,40 +177,24 @@ class DayLevelModel(HourLevelModel):
     def model_index(self, sensor_id, timestamp):
         return "s%d-%.1f" % (sensor_id, timestamp)
 
-    def rv_mean(self, index):
-        return self.model[index].mean
-
-    def rv_var(self, index):
-        return self.model[index].variance
-
-    def rv_add_entry(self, index, entry):
-        self.model[index].add_entry(entry)
-
-    def rv_calc_mean(self, index):
-        self.model[index].calc_mean()
-
-    def rv_calc_var(self, index):
-        self.model[index].calc_var()
-
-    def rv_calc_learning_params(self, index, next_index):
-        prev = np.array(self.model[index].samples)
-        next = np.array(self.model[next_index].samples)
-        self.model[index].estimate_learning_params(prev, next)
+    def model_variable(self, sensor_id, timestamp):
+        index = self.model_index(sensor_id, timestamp)
+        return self.model[index]
 
     def populate_sensor_rvs(self, sensor_id, sensor_data, timestamps):
-        for i, entry in enumerate(sensor_data):
-            rv_index = self.model_index(sensor_id, timestamps[i])
-            self.rv_add_entry(rv_index, entry)
+        for timestamp, entry in zip(timestamps, sensor_data):
+            self.model_variable(sensor_id, timestamp).add_entry(entry)
 
         for timestamp in np.arange(0.0, 24.0, 0.5):
             next_timestamp = (timestamp + 0.5) % 24
+            rv = self.model_variable(sensor_id, timestamp)
+            next_rv = self.model_variable(sensor_id, next_timestamp)
 
-            rv_index = self.model_index(sensor_id, timestamp)
-            next_rv_index = self.model_index(sensor_id, next_timestamp)
-
-            self.rv_calc_mean(rv_index)
-            self.rv_calc_var(rv_index)
-            self.rv_calc_learning_params(rv_index, next_rv_index)
+            rv.calc_mean()
+            rv.calc_var()
+            current_data = np.array(rv.samples)
+            next_data = np.array(next_rv.samples)
+            rv.estimate_learning_params(current_data, next_data)
 
     def train(self, train_data):
         # [mean, variance, entries, num_entries, b_0, b_1, residual]
