@@ -119,35 +119,44 @@ class HourLevelModel(SensorModel):
         rv.calc_var()
         next = sensor_readings
         rv.estimate_learning_params(next)
-        # return rv.data_()
         return rv
+
+    def infer_current_state(self, sensor_rv, prev_snapshot):
+        b_0 = sensor_rv.b_0
+        b_1 = sensor_rv.b_1
+        sigma_sq = sensor_rv.residual
+
+        prev_mean = prev_snapshot.mean
+        prev_sigma_sq = prev_snapshot.variance
+
+        mean = b_0 + b_1 * prev_mean
+        var = sigma_sq + (b_1 ** 2) * prev_sigma_sq
+
+        prev_snapshot.mean = mean
+        prev_snapshot.variance = var
+        return mean
 
     def infer_timestamp(self, sensor_data, whitelist):
         num_sensors = self.get_num_sensors(sensor_data)
         res = np.zeros(num_sensors)
-        for sensor in range(num_sensors):
+        for sensor, sensor_rv in self.sensor_params.items():
             if self.to_be_observed(sensor, whitelist):
                 res[sensor] = sensor_data[sensor]
-                self.prev_state[sensor] = [res[sensor], 0]
-            elif not self.prev_state[sensor]:
-                # res[sensor] = self.sensor_params[sensor][0]
-                res[sensor] = self.sensor_params[sensor].mean
-                self.prev_state[sensor] = [res[sensor],
-                                           self.sensor_params[sensor].variance]
-                                           # self.sensor_params[sensor][1]]
+                # Throws trash for GC after first timestamp :-(
+                # TODO: prev pointers maybe?
+                self.prev_snapshot[sensor] = RandomVariable()
+                self.prev_snapshot[sensor].observe(sensor_data[sensor])
+
+            elif not self.prev_snapshot[sensor]:
+                res[sensor] = sensor_rv.mean
+                # Same Object pointer for both
+                prev_rv = self.prev_snapshot[sensor] = RandomVariable()
+                prev_rv.mean = sensor_rv.mean
+                prev_rv.variance = sensor_rv.variance
+
             else:
-                b_0 = self.sensor_params[sensor].b_0
-                b_1 = self.sensor_params[sensor].b_1
-                sigma_sq = self.sensor_params[sensor].residual
-
-                prev_mean = self.prev_state[sensor][0]
-                prev_sigma_sq = self.prev_state[sensor][1]
-
-                mean = b_0 + b_1 * prev_mean
-                var = sigma_sq + (b_1 ** 2) * prev_sigma_sq
-
-                res[sensor] = mean
-                self.prev_state[sensor] = [mean, var]
+                res[sensor] = self.infer_current_state(sensor_rv,
+                                                       self.prev_snapshot[sensor])
         return res
 
     def train(self, train_data):
@@ -155,7 +164,7 @@ class HourLevelModel(SensorModel):
                               for sensor_id, readings in enumerate(train_data)}
 
     def infer_window(self, test_data, budget):
-        self.prev_state = defaultdict(lambda: False)
+        self.prev_snapshot = defaultdict(lambda: False)
         num_sensors = self.get_num_sensors(test_data)
         num_timestamps = self.get_num_timestamps(test_data)
         a = ActiveInferenceWindow()
@@ -163,15 +172,14 @@ class HourLevelModel(SensorModel):
         return self.infer(test_data, windows, self.infer_timestamp)
 
     def infer_var(self, test_data, budget):
-        self.prev_state = defaultdict(lambda: False)
+        self.prev_snapshot = defaultdict(lambda: False)
         transposed_data = test_data.T
         transposed_res = np.zeros_like(transposed_data)
-        # temp_hsh = {k: v[1] for k, v in self.sensor_params.items()}
         temp_hsh = {k: v.variance for k, v in self.sensor_params.items()}
         whitelist = sorted(temp_hsh, key=temp_hsh.get, reverse=True)[:budget]
         for i, sensor_data in enumerate(transposed_data):
             transposed_res[i] = self.infer_timestamp(sensor_data, whitelist)
-            temp_hsh = {k: v[1] for k, v in self.prev_state.items()}
+            temp_hsh = {k: v.variance for k, v in self.prev_snapshot.items()}
             whitelist = sorted(temp_hsh, key=temp_hsh.get, reverse=True)[:budget]
         return transposed_res.T
 
@@ -339,8 +347,8 @@ for budget in budgets:
     write_csv_data(tmp_results_folder + dv_filename, tmp_dv_pred)
 
     tmp_model_1_mae[hw_filename] = np.mean(np.absolute(tmp_hw_pred - tmp_test_data))
-    tmp_model_2_mae[hv_filename] = np.mean(np.absolute(tmp_hv_pred - tmp_test_data))
-    tmp_model_1_mae[dw_filename] = np.mean(np.absolute(tmp_dw_pred - tmp_test_data))
+    tmp_model_1_mae[hv_filename] = np.mean(np.absolute(tmp_hv_pred - tmp_test_data))
+    tmp_model_2_mae[dw_filename] = np.mean(np.absolute(tmp_dw_pred - tmp_test_data))
     tmp_model_2_mae[dv_filename] = np.mean(np.absolute(tmp_dv_pred - tmp_test_data))
 
     hum_hw_pred = hum_model_1.infer_window(hum_test_data, budget)
@@ -354,8 +362,8 @@ for budget in budgets:
     write_csv_data(hum_results_folder + dv_filename, hum_dv_pred)
 
     hum_model_1_mae[hw_filename] = np.mean(np.absolute(hum_hw_pred - hum_test_data))
-    hum_model_2_mae[hv_filename] = np.mean(np.absolute(hum_hv_pred - hum_test_data))
-    hum_model_1_mae[dw_filename] = np.mean(np.absolute(hum_dw_pred - hum_test_data))
+    hum_model_1_mae[hv_filename] = np.mean(np.absolute(hum_hv_pred - hum_test_data))
+    hum_model_2_mae[dw_filename] = np.mean(np.absolute(hum_dw_pred - hum_test_data))
     hum_model_2_mae[dv_filename] = np.mean(np.absolute(hum_dv_pred - hum_test_data))
 
 write_mae_data(results_dir + 'temperature_model_1_mae.txt', tmp_model_1_mae)
