@@ -70,7 +70,8 @@ class RandomVariable(object):
     def calc_var(self):
         self.variance = np.var(self.samples)
 
-    def estimate_learning_params(self, current, next):
+    def estimate_learning_params(self, next):
+        current = np.array(self.samples)
         regr = linear_model.LinearRegression()
         regr.fit(np.reshape(current, (-1 , 1)), next)
         self.b_1 = regr.coef_[0]
@@ -113,12 +114,11 @@ class SensorModel(object):
 class HourLevelModel(SensorModel):
 
     def estimate_sensor_params(self, sensor_readings):
-        rv = RandomVariable(sensor_readings)
+        rv = RandomVariable(np.roll(sensor_readings, 1))
         rv.calc_mean()
         rv.calc_var()
-        prev = np.roll(sensor_readings, 1)
         next = sensor_readings
-        rv.estimate_learning_params(prev, next)
+        rv.estimate_learning_params(next)
         return rv.data_()
 
     def infer_timestamp(self, sensor_data, whitelist):
@@ -192,9 +192,8 @@ class DayLevelModel(HourLevelModel):
 
             rv.calc_mean()
             rv.calc_var()
-            current_data = np.array(rv.samples)
             next_data = np.array(next_rv.samples)
-            rv.estimate_learning_params(current_data, next_data)
+            rv.estimate_learning_params(next_data)
 
     def train(self, train_data):
         # [mean, variance, entries, num_entries, b_0, b_1, residual]
