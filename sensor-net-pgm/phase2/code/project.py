@@ -119,7 +119,8 @@ class HourLevelModel(SensorModel):
         rv.calc_var()
         next = sensor_readings
         rv.estimate_learning_params(next)
-        return rv.data_()
+        # return rv.data_()
+        return rv
 
     def infer_timestamp(self, sensor_data, whitelist):
         num_sensors = self.get_num_sensors(sensor_data)
@@ -129,13 +130,15 @@ class HourLevelModel(SensorModel):
                 res[sensor] = sensor_data[sensor]
                 self.prev_state[sensor] = [res[sensor], 0]
             elif not self.prev_state[sensor]:
-                res[sensor] = self.sensor_params[sensor][0]
+                # res[sensor] = self.sensor_params[sensor][0]
+                res[sensor] = self.sensor_params[sensor].mean
                 self.prev_state[sensor] = [res[sensor],
-                                           self.sensor_params[sensor][1]]
+                                           self.sensor_params[sensor].variance]
+                                           # self.sensor_params[sensor][1]]
             else:
-                b_0 = self.sensor_params[sensor][2]
-                b_1 = self.sensor_params[sensor][3]
-                sigma_sq = self.sensor_params[sensor][4]
+                b_0 = self.sensor_params[sensor].b_0
+                b_1 = self.sensor_params[sensor].b_1
+                sigma_sq = self.sensor_params[sensor].residual
 
                 prev_mean = self.prev_state[sensor][0]
                 prev_sigma_sq = self.prev_state[sensor][1]
@@ -163,7 +166,8 @@ class HourLevelModel(SensorModel):
         self.prev_state = defaultdict(lambda: False)
         transposed_data = test_data.T
         transposed_res = np.zeros_like(transposed_data)
-        temp_hsh = {k: v[1] for k, v in self.sensor_params.items()}
+        # temp_hsh = {k: v[1] for k, v in self.sensor_params.items()}
+        temp_hsh = {k: v.variance for k, v in self.sensor_params.items()}
         whitelist = sorted(temp_hsh, key=temp_hsh.get, reverse=True)[:budget]
         for i, sensor_data in enumerate(transposed_data):
             transposed_res[i] = self.infer_timestamp(sensor_data, whitelist)
