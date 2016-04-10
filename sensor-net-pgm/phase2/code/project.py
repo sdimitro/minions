@@ -50,15 +50,48 @@ def write_mae_data(filename, data):
         f.write("\n".join(map(lmbd, sorted(data))))
         f.write("\n")
 
-class ActiveInferenceWindow(object):
-
-    def generate_windows(self, limit, window_size, n):
-        nums = itertools.cycle(range(limit))
-        return [[next(nums) for _ in range(window_size)] for _ in range(n)]
-
 #### Modeling
 
-class SensorModel:
+class RandomVariable(object):
+
+    def __init__(self, samples=None):
+        # Screw you Python and your mutable default arguments!
+        self.samples = ([] if samples is None else samples)
+        self.mean, self.variance = False, False
+        self.b_0, self.b_1, self.residual = False, False, False
+        self.observed = False
+
+    def add_entry(self, entry):
+        self.samples.append(entry)
+
+    def calc_mean(self):
+        self.mean = np.mean(self.samples)
+
+    def calc_var(self):
+        self.variance = np.var(self.samples)
+
+    def estimate_learning_params(self, current, next):
+        regr = linear_model.LinearRegression()
+        regr.fit(np.reshape(current, (-1 , 1)), next)
+        self.b_1 = regr.coef_[0]
+        self.b_0 = regr.intercept_
+        self.residual = np.var(next - (self.b_0 + self.b_1 * current))
+
+    def observe(self, observation):
+        self.mean, self.var = observation, 0
+        self.samples = []
+        self.observed = True
+
+    def data_(self):
+        return [self.mean, self.variance,
+                self.b_1, self.b_0, self.residual]
+
+    def all_data_(self):
+        return [self.mean, self.variance,
+                self.samples, len(self.samples),
+                self.b_0, self.b_1, self.residual]
+
+class SensorModel(object):
 
     def get_num_sensors(self, readings):
         return len(readings)
@@ -80,19 +113,13 @@ class SensorModel:
 class HourLevelModel(SensorModel):
 
     def estimate_sensor_params(self, sensor_readings):
-        mean = np.mean(sensor_readings)
-        var  = np.var(sensor_readings)
-
+        rv = RandomVariable(sensor_readings)
+        rv.calc_mean()
+        rv.calc_var()
         prev = np.roll(sensor_readings, 1)
         next = sensor_readings
-
-        regr = linear_model.LinearRegression()
-        regr.fit(np.reshape(prev, (-1 , 1)), next)
-
-        b_1 = regr.coef_
-        b_0 = regr.intercept_
-        residual = np.var(next - (b_0 + b_1 * prev))
-        return [mean, var, b_1[0], b_0, residual]
+        rv.estimate_learning_params(prev, next)
+        return rv.data_()
 
     def infer_timestamp(self, sensor_data, whitelist):
         num_sensors = self.get_num_sensors(sensor_data)
@@ -151,31 +178,24 @@ class DayLevelModel(HourLevelModel):
         return "s%d-%.1f" % (sensor_id, timestamp)
 
     def rv_mean(self, index):
-        return self.model[index][0]
+        return self.model[index].mean
 
     def rv_var(self, index):
-        return self.model[index][1]
+        return self.model[index].variance
 
     def rv_add_entry(self, index, entry):
-        self.model[index][2].append(entry)
-        self.model[index][3] += 1
+        self.model[index].add_entry(entry)
 
     def rv_calc_mean(self, index):
-        self.model[index][0] = np.mean(self.model[index][2])
+        self.model[index].calc_mean()
 
     def rv_calc_var(self, index):
-        self.model[index][1] = np.var(self.model[index][2])
+        self.model[index].calc_var()
 
     def rv_calc_learning_params(self, index, next_index):
-        prev = np.array(self.model[index][2])
-        next = np.array(self.model[next_index][2])
-
-        regr = linear_model.LinearRegression()
-        regr.fit(np.reshape(prev, (-1 , 1)), next)
-
-        b_0 = self.model[index][5] = regr.coef_[0]
-        b_1 = self.model[index][4] = regr.intercept_
-        self.model[index][6] = np.var(next - (b_0 + b_1 * prev))
+        prev = np.array(self.model[index].samples)
+        next = np.array(self.model[next_index].samples)
+        self.model[index].estimate_learning_params(prev, next)
 
     def populate_sensor_rvs(self, sensor_id, sensor_data, timestamps):
         for i, entry in enumerate(sensor_data):
@@ -194,10 +214,12 @@ class DayLevelModel(HourLevelModel):
 
     def train(self, train_data):
         # [mean, variance, entries, num_entries, b_0, b_1, residual]
-        self.model = defaultdict(lambda: [0, 0, [], 0, 0, 0, 0])
+        # self.model = defaultdict(lambda: [0, 0, [], 0, 0, 0, 0])
+        self.model = defaultdict(RandomVariable)
         timestamps = generate_timestamps(self.get_num_timestamps(train_data))
         for sensor_id, sensor_readings in enumerate(train_data):
             self.populate_sensor_rvs(sensor_id, sensor_readings, timestamps)
+        self.model = {k: v.all_data_() for k, v in self.model.items()}
 
 
     def infer_timestamp(self, sensor_data, timestamp, whitelist):
@@ -268,6 +290,14 @@ class DayLevelModel(HourLevelModel):
             temp_hsh = {k: v[1] for k, v in self.prev_state.items()}
             whitelist = sorted(temp_hsh, key=temp_hsh.get, reverse=True)[:budget]
         return transposed_res.T
+
+### Inference
+
+class ActiveInferenceWindow(object):
+
+    def generate_windows(self, limit, window_size, n):
+        nums = itertools.cycle(range(limit))
+        return [[next(nums) for _ in range(window_size)] for _ in range(n)]
 
 #### Running code
 
