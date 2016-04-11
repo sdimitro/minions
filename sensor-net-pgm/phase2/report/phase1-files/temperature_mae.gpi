@@ -1,0 +1,14 @@
+set terminal pngcairo
+set output 'temperature_mae.png'
+
+set style data histograms
+set boxwidth 1
+set style fill solid
+
+set xlabel 'Budget'
+set ylabel 'Mean Absolute Error'
+set yrange [0 : 1.3]
+
+plot "phase1-files/temperature_mae.dat" using 2:xtic(1)\
+ title "Variance" lt rgb "gold",\
+ "" using 3 title "Window" lt rgb "red"
