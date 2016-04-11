@@ -3,7 +3,7 @@
 \usepackage{graphicx}
 \usepackage{subcaption}
 
-\graphicspath{ {phase1-files/} }
+\graphicspath{ {phase1-files/} {phase2-files/} }
 
 \title{CS583: Project Phase 1 and 2}
 \date{\today}
@@ -126,7 +126,7 @@ and (b).
 \newpage
 
 To do some verification first, when the budget is 0
-it is expected that both appraoches will do equally
+it is expected that both approaches will do equally
 as is the case. Also, as the budget grows both
 approaches return more accurate results which is
 also expected.
@@ -199,6 +199,120 @@ their predictions to the actual test results and
 calculating the mean absolute error of my
 predictions. The results are displayed in the figures
 below.
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_0.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_5.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_10.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_20.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_25.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_0.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_5.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_10.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_20.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_25.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+To do some verification first, all models do their
+worst when the budget is 0 and their accuracy
+increases as the budget increases. Also at
+budget zero both inference methods have an equal
+mean absolute error for each model which makes
+sense, since nothing is observed.
+
+At budget 0 for both humidity and temperature,
+model 1 from phase 2 does worst. That makes sense
+since each sensors parameters stay the same no
+matter what the time is and it does not have the
+granularity of of the phase 1 model or model 2
+which basically have specific parameters tuned
+for each timestamp in a day. This is also the
+reason why model 2 and the phase 1 model have
+more or less the same accuracy when the budget
+is 0.
+
+At budget 5 the temperature predictions
+of model 1 are approaching the accuracy of
+phase 1 model and model 2 as it gets some
+help from the observed sensors. This happens
+in the humidity sensor readings where model 1
+not only catches up to the other two but it also
+gets more accurate results than the phase 1
+model.
+
+The same trends as budget 5 are presented in
+the graphs of budget 10, 20, and 25 (but all with even
+more accurate results). Around budget 20 and then
+at budget 25, we see that models 1 and 2 do
+significantly better than the phase 1 model.
+What is also surprising, is that model 1 actually
+ends up doing better than model 2 in both
+temperature and humidity readings at this point.
+Model 2 is supposed to have a finer granularity
+that would intuitively give more accurate results
+than model 1. I still cannot make any conclusions
+from these because our dataset is not that big
+and varied.
+
+As for the different active reference methods
+used in our two new models, there really seems
+to be no particular pattern and that is
+understandable. Both methods do more or less
+the same because depending on their budget
+they will get data from all the sensors in a
+specific period of time. In the Window method
+that makes sense because it literally scans
+through all the sensors. In the Variance method
+that happens because once a sensor has been
+observed the variance of its reading variance
+is set to 0 and most probably it won't be
+picked to be read any time soon since the
+algorithm always chooses the sensors with
+the highest variance.
+
+\newpage
 
 \section{More on Phase 3...}
 
