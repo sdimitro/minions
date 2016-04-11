@@ -83,15 +83,6 @@ class RandomVariable(object):
         self.samples = []
         self.observed = True
 
-    def data_(self):
-        return [self.mean, self.variance,
-                self.b_1, self.b_0, self.residual]
-
-    def all_data_(self):
-        return [self.mean, self.variance,
-                self.samples, len(self.samples),
-                self.b_0, self.b_1, self.residual]
-
 class SensorModel(object):
 
     def get_num_sensors(self, readings):
@@ -109,7 +100,6 @@ class SensorModel(object):
 
     def to_be_observed(self, sensor_id, whitelist):
         return sensor_id in whitelist
-
 
 class HourLevelModel(SensorModel):
 
