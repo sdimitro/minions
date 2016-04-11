@@ -49,3 +49,21 @@ Ea qui dicunt fuisset constituto. Vis latine iracundia at.
 Ea minim noster his, sale autem eloquentiam sit ex, ex
 legere oporteat intellegat ius. Virtute percipitur vix id,
 usu quis simul delicatissimi an, mel illum dolorum in. \fIitalics\fP.
+
+.TS \" Table start
+center box tab (:);
+cb cb cb cb
+r | n | l | l.
+Telephone Number:Serial Number:Contact:Supplier
+_
+123-3456:123.:Jim:ABS Supplies
+123-5437:.456::Genco Paints
+557-234-3333:123.456:Suzy:HAL Computer Systems
+.TE \" Table end
+
+Hello!
+
+Hello!
+
+
+Hello!

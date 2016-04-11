@@ -12,7 +12,7 @@ preview: compile
 	evince $(GROFF_OUT)
 
 compile:
-	groff -m ms $(GROFF_SRC) > $(GROFF_OUT)
+	tbl $(GROFF_SRC) | groff -m ms > $(GROFF_OUT)
 
 clean:
 	rm -f $(GROFF_OUT) $(GROFF_PDF)
