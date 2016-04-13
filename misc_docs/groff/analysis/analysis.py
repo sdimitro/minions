@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+import math
 import numpy as np
 
 def measure_gflops(inst):
@@ -86,12 +87,31 @@ def mike_instance_cost(hsh):
         v['Total']  = v['CPU-cost'] + v['Mother-cost']
         v['Total'] += v['RAM-Q'] * v['RAM-QPrice']
         v['Total'] += v['Storage-Price'] + v['Case-Price']
-        v['Total'] += v['Net-Cost']
+        v['Total'] += v['Net-Cost'] + v['Icooling-Price']
 
 def print_instance_table(hsh):
     print("Instance\tPrice")
     for k, v in hsh.items():
         print("\t".join([k, str(v['Total'])]))
+
+def price_hour_flop_pr(hsh1, hsh2, ocost):
+    for k, v in hsh1.items():
+        v['$/TFLOP'] = (v['Total'] / (5 * 365 * 24))
+        v['Estimated'] = v['$/TFLOP'] + (ocost['Room cooling cost'] + ocost['Operations cost'] + ocost['Wires, Switches, Interconnects...etc MAX cost']) / (5 * 365 * 24)
+        v['$/TFLOP'] *= 1000 / (hsh2[k]['GFLOPS'])
+        v['Estimated'] *= 1000 / (hsh2[k]['GFLOPS'])
+
+def num_instance(gflops, instance_type):
+    return math.ceil(gflops / instance_type['GFLOPS'])
+
+def print_plot1_num(hsh2, hsh):
+    for k, v in hsh2.items():
+        for i in [1, 10, 100, 1000, 10000, 100000, 1000000]:
+            n = num_instance(i, v)
+            my_ratio = hsh[k]['$/TFLOP']
+            my_ratio += (hsh[k]['Estimated'] - hsh[k]['$/TFLOP']) / n
+            print(k, n, v['$/TFLOP'], my_ratio)
+        print("===")
 
 instance_mike = {
 'm4.10xlarge': {
@@ -107,7 +127,9 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA24G1XA5330',
-    'Net-Cost': 500
+    'Net-Cost': 500,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 },
 'm3.large' :   {
     'CPU-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16819116929&cm_re=Xeon_E5-2670_v2-_-19-116-929-_-Product',
@@ -122,7 +144,9 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16833106015',
-    'Net-Cost': 143
+    'Net-Cost': 143,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 },
 'm3.2xlarge' : {
     'CPU-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16819116929&cm_re=Xeon_E5-2670_v2-_-19-116-929-_-Product',
@@ -137,7 +161,9 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16833106015',
-    'Net-Cost': 143
+    'Net-Cost': 143,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 },
 'c3.8xlarge' : {
     'CPU-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16819116928&cm_re=Xeon_E5-2680_v2-_-19-116-928-_-Product',
@@ -152,7 +178,9 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA24G1XA5330',
-    'Net-Cost': 500
+    'Net-Cost': 500,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 },
 'g2.2xlarge' : {
     'CPU-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA6393RS7704&cm_re=Xeon_E5-2670-_-9SIA6393RS7704-_-Product',
@@ -168,7 +196,9 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA24G1XA5330',
-    'Net-Cost': 500
+    'Net-Cost': 500,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 },
 'r3.4xlarge' : {
     'CPU-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16819116929&cm_re=Xeon_E5-2670_v2-_-19-116-929-_-Product',
@@ -183,7 +213,9 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA24G1XA5330',
-    'Net-Cost': 500
+    'Net-Cost': 500,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 },
 'i2.8xlarge' : {
     'CPU-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16819116929&cm_re=Xeon_E5-2670_v2-_-19-116-929-_-Product',
@@ -198,7 +230,9 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA24G1XA5330',
-    'Net-Cost': 500
+    'Net-Cost': 500,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 },
 'd2.8xlarge' : {
     'CPU-Link': 'http://www.ebay.com/itm/INTEL-XEON-E5-2676-V3-2-40GHz-SR1Y5-30Mb-12-Cores-/252340932142?hash=item3ac0b10e2e:g:3oAAAOSwKtVW1XQf',
@@ -213,10 +247,23 @@ instance_mike = {
     'Case-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16811165213&cm_re=Server_Case-_-11-165-213-_-Product',
     'Case-Price': 60,
     'Net-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA24G1XA5330',
-    'Net-Cost': 500
+    'Net-Cost': 500,
+    'Icooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16835203022&cm_re=server_cooler-_-35-203-022-_-Product',
+    'Icooling-Price': 59
 }
+}
+
+other_costs = {
+        'Room cooling-Link': 'http://www.newegg.com/Product/Product.aspx?Item=9SIA5W62BP9534&cm_re=server_cooler-_-9SIA5W62BP9534-_-Product',
+        'Room cooling cost': 1149,
+        'Operations cost': 5 * 50000,
+        'Switch-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16833122511&cm_re=Server_Router-_-33-122-511-_-Product',
+        'Wires, Switches, Interconnects...etc MAX cost': 3.5 * 1502,
+        'KVM-Switch-Link': 'http://www.newegg.com/Product/Product.aspx?Item=N82E16817802177&cm_re=Server_wire-_-17-802-177-_-Product',
+        'Average cost of power per server (+cooling)': 5 * 800
 }
 
 mike_instance_cost(instance_mike)
 print_instance_table(instance_mike)
-
+print()
+price_hour_flop_pr(instance_mike, instance, other_costs)
