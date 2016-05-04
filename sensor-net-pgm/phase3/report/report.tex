@@ -3,9 +3,9 @@
 \usepackage{graphicx}
 \usepackage{subcaption}
 
-\graphicspath{ {phase1-files/} {phase2-files/} }
+\graphicspath{ {phase1-files/} {phase2-files/} {phase3-files/} }
 
-\title{CS583: Project Phase 1 and 2}
+\title{CS583: Project Phases 1, 2, and 3}
 \date{\today}
 \author{Serapheim Dimitropoulos}
 
@@ -312,8 +312,167 @@ picked to be read any time soon since the
 algorithm always chooses the sensors with
 the highest variance.
 
+\section{Phase 3 Model}
+
+In this phase I add one final model to my
+experiment. In this model, the assumption that
+each sensor's data is a linear chain, is no longer
+assumed. This way the model attempts to possibly
+detect and take advantage of the spatial and the
+temporal correlations between sensors. Nevertheless,
+it still makes the assumption that states are
+first-order Markovian.
+
+As for its stationary assumption, I chose to
+make this model stationary at half-hour levels
+(like Model 1 from Phase 2) instead of day
+levels. My reasoning was that I don't have
+enough data to train a model sufficiently to
+be stationary at day levels. Looking again at
+the evaluation of my Phase 2 models, I felt
+that even if Model 1 did not start well at
+budget 0, it quickly caught up and performed
+better than Model 2 as the budget increased
+given my fixed dataset.
+
+For learning I use regression; the Lasso Linear
+model, specifically. For each sensor I had to calculate
+52 parameters (excluding initial mean and variance which
+I calculated by taking the mean and tha variance of all
+the data entries per sensor). These parameters include
+the regression's intercept ($\beta_0$), its
+coefficients ($\beta_1$, $\beta_2$,...$\beta_{50}$) which
+basically model how strong each sensor's correlation is
+to the sensor in question, and finally the sensor's
+variance ($\sigma^2$) which I fit on the residuals.
+
+Note that using Lasso instead of Linear regression was
+a crucial change in this model. I attempted to use
+Linear regression at first and the mean absolute error
+of the model, especially for low budgets was incredibly
+high. I believe the reason was that Linear regression
+was giving equal consideration to all the coefficients
+of each sensor which is not really what I was going for
+in this model. Lasso on the other hand seems a lot more
+suited for the model since it reduces the number of
+variables upon each prediction is dependent. In other
+words, it considers only the sensors that seem to
+actually correlate with the sensor in question.
+
+I used Kalman Filtering for inference, with one caveat.
+When running inference in this model, there is a
+backaward-forward effect that my model could potentially
+take advantage of. When observing a sensor A at time t+1
+the mean and variance of an unobserved sensor B which is
+correlated with A at time t should be affected, thus
+affecting its prediction at t+1. Unfortunately I regret
+saying that I do not include that backward-forward effect.
+
+Again, as a final note, when I train my model I connect
+the first timestamp of the next day with the last timestamp
+of the current day.
+
+\section{Phase 3 Evaluation}
+
+Like Phases 1 and 2,
+assuming a variety of budgets (0, 5, 10, 20 and 25
+sensors that the central server can communicate at
+each time stamp), I evaluate all the models by comparing
+their predictions to the actual test results and
+calculating the mean absolute error of my
+predictions. The results are displayed in the figures
+below.
+
 \newpage
 
-\section{More on Phase 3...}
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_0_final.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_5_final.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_10_final.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_20_final.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{temperature_25_final.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_0_final.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_5_final.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_10_final.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+\begin{figure}[h!]
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_20_final.png}
+	\end{subfigure}
+	\begin{subfigure}{\linewidth}
+	\includegraphics[scale=0.5]{humidity_25_final.png}
+	\end{subfigure}
+\end{figure}
+
+\newpage
+
+From the above, I observe the following phenomena. At
+budget 0,  phase 3 and phase 2 model 1 are identical
+as is phase 1 and phase 2 model 2. Phase 1 and phase
+2 model 2 perform better that the others, which makes
+sense in a way since they have finer granularity in
+their samples during training (in contrast to the others
+where they take the mean and variance from all readings
+per sensor). Therefore, for no budget we could conclude
+that they work the best for our given dataset.
+
+At budgets 5 and 10, phase 3's model with variance
+active inference method outperfoms all other methods
+and models by a significant margin. The window approach
+on the other had does not. My explanation is that since
+we have some sensors on our budgets we make better
+predictions choosing sensors with high variance that
+are ultimately correlated with other sensors (spatially
+or temporarilly), therefore keeping the overall variance
+of all sensors low. The other models and methods do not
+have that advantage.
+
+As the budget increases to 20 and 25, we see that the
+two models from phase 2 are starting to catch up and
+eventually perform slightly better than phase 3's model.
+In a way that makes sense because as we start reading
+more and more sensor the benefit of spatial and
+temporal correlations decreases since we only need
+two consecutive timestamps for example to read all
+the sensors in the window approach.
+
+On a final note, humidity seems more difficult to
+predict than temperature because the mean absolute
+errors, especially for low budgets, are higher than
+temperature.
 
 \end{document}
