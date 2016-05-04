@@ -61,9 +61,9 @@ def calculate_betas(data):
     residuals = []
     regrs = []
 
-    for sensor_data in data:
+    for i, sensor_data in enumerate(data):
         b = [0.0, []]
-        regr = linear_model.LinearRegression()
+        regr = linear_model.Lasso(alpha=0.11, max_iter=5000)
         regr.fit(inversed_data, np.roll(sensor_data, -1))
         b[0] = regr.intercept_
         b[1] = list(regr.coef_)
