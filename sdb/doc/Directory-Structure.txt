@@ -1,0 +1,44 @@
+bin/ --
+	Where the shell script that starts sdb is located.
+
+doc/ --
+	All documentation goes here, from repository structure explanations
+	to tutorials and helpful contributor blogposts. Generic documentation
+	goes to this folder. Blogpost are copied in te blogs/<username>
+	subdirectory. The reason why we save blogposts is for the case that
+	a contributor migrates or deletes their blog overtime and there are
+	no copies of their work left.
+
+libsdb/ --
+	All C code (generally libraries and their wrappers) should go here.
+
+sdb/ --
+	All Lua code (the code that uses the C code, the interpreter ...etc)
+sdb/std/ --
+	Standard library and Lua constructs for using/extending the debugger.
+sdb/commons/ --
+	Common and useful commands mae with the standard library of sdb.
+sdb/compat/ --
+	Alternative user interfaces for compatibility with other debuggers.
+
+share/ --
+	Miscellaneous things that we install together with the debugger
+	(i.e. man pages).
+
+test/ --
+	The test-suite resides here.
+
+extras/ --
+	Anything else goes here.
+extras/include --
+	We currently ship with the libproc header for versions of illumos
+	that ship with the libproc shared object but not the header.
+
+Makefile --
+	Self-explanatory. We try to keep it self-contained and non-recursive.
+
+LICENSE --
+	Self-explanatory.
+
+Readme.md --
+	Self-explanatory.

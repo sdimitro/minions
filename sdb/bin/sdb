@@ -1,0 +1,4 @@
+#!/bin/sh
+
+export LUA_CPATH="$(pwd)/../lib/?.so"
+lua -i $(pwd)/../share/sdb/interp.lua

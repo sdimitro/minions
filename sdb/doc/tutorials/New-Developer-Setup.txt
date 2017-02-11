@@ -1,0 +1,16 @@
+This guide is for newcomers who want to help in the development of sdb
+and don't have an illumos environment.
+
+The easiest way to setup a developer environment is to download VirtualBox
+and Vagrant, and download a stock OmniOS VM from here:
+https://atlas.hashicorp.com/omnios
+
+After you boot into that and get acquainted with the environment and the
+package manager, install the essentials (git, gcc, lua, etc ...) and clone
+the repo.
+
+Typing `make help` in the root of the repo should give you enough info to
+continue from there. Have fun :-)
+
+NOTE: If your illumos distribution ships with libproc.so but not the
+header of the library, just grab it from extras/include directory.

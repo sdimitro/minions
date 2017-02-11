@@ -1,0 +1,23 @@
+libSDB exists as a very thin layer between libproc/libkvm
+and the lua bindings.  Functions in the library should have
+one-to-one mapping to functions in libproc and libkvm (see
+libsdb.c). To be more specific, they are wrappers to the
+library functions that only add an extra layer of error
+handling. That should be their one and only goal. The extra
+layer of error handling only exists to smooth error handling
+mechanisms from the libraries that are too bare for the Lua
+interpreter.
+
+The lua bindings/wrappers to the functions of libSDB are just
+another thin layer that is responsible for errors coming from
+the interpreter's side. Not passing the correct number or types
+of arguments to a libSDB function fuction, for example. Ideally
+in the future, this error handling will exist in a more
+sophisticated code in the Lua code. For now though, we put this
+part in C code to remain adaptable to hardcore refactoring of
+the Lua code.
+
+The reason why the design is like this is because in order for
+the debugger to be as extensible/flexible as possible we should
+expose the most primitive functionality to it and build everything
+in Lua in terms of that.
