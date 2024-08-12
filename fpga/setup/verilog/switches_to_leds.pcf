@@ -1,0 +1,11 @@
+# LED pints:
+set_io led_1 56
+set_io led_2 57
+set_io led_3 59
+set_io led_4 60
+
+# Push-button switches:
+set_io switch_1 53
+set_io switch_2 51
+set_io switch_3 54
+set_io switch_4 52

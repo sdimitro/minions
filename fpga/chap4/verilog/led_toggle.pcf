@@ -1,0 +1,14 @@
+# LED pins:
+set_io o_led_1 56
+set_io o_led_2 57
+set_io o_led_3 59
+set_io o_led_4 60
+
+# Push-button switches:
+set_io i_switch_1 53
+set_io i_switch_2 51
+set_io i_switch_3 54
+set_io i_switch_4 52
+
+# System Clock - Pin 15
+set_io i_clk 15

@@ -1,0 +1,32 @@
+```
+dserapheim@dserapheim97QHQ k-largest-element % for i in {0..100}; do echo $RANDOM >> 100-samples.txt ; done
+
+dserapheim@dserapheim97QHQ k-largest-element % head 100-samples.txt
+29308
+15461
+15748
+19353
+16759
+4536
+18905
+29544
+21849
+25196
+```
+
+```
+dserapheim@dserapheim97QHQ k-largest-element % sort -nr 10-samples.txt | head -n 3 | tail -n 1
+13570
+dserapheim@dserapheim97QHQ k-largest-element % sort -nr 10-samples.txt
+21101
+15551
+13570
+13063
+12326
+11735
+10271
+8986
+4469
+3886
+3832
+```
