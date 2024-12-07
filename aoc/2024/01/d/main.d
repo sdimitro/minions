@@ -11,7 +11,7 @@ auto process_file(string path) {
     int[] lcol, rcol;
     int[int] freq, score;
 
-    auto file = File(path); // XXX: exception catch
+    auto file = File(path);
     foreach (tokens; file.byLine().map!split) {
         assert(tokens.length == 2, "incorrect input file format");
         auto lnum = parse!int(tokens[0]);
