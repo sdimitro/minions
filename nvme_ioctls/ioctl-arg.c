@@ -68,6 +68,13 @@ struct nvme_passthru_cmd {
 
 #define nvme_admin_cmd nvme_passthru_cmd
 
+#define SPDK_NVMF_TRSTRING_MAX_LEN 32
+#define SPDK_NVMF_TRADDR_MAX_LEN 256
+struct cuse_transport {
+        char trstring[SPDK_NVMF_TRSTRING_MAX_LEN + 1];
+        char traddr[SPDK_NVMF_TRADDR_MAX_LEN + 1];
+};
+
 /* What I've been wanting to look up */
 #define NVME_IOCTL_ID           _IO('N', 0x40)
 #define NVME_IOCTL_ADMIN_CMD    _IOWR('N', 0x41, struct nvme_admin_cmd)
@@ -76,6 +83,14 @@ struct nvme_passthru_cmd {
 #define NVME_IOCTL_RESET        _IO('N', 0x44)
 #define NVME_IOCTL_SUBSYS_RESET _IO('N', 0x45)
 #define NVME_IOCTL_RESCAN       _IO('N', 0x46)
+
+/* also */
+#define BLKGETSIZE   _IO(0x12,96)  /* return device size /512 (long *arg) */
+#define BLKSSZGET    _IO(0x12,104) /* get block device sector size */
+#define BLKPBSZGET   _IO(0x12,123)
+#define BLKGETSIZE64 _IOR(0x12,114,size_t) /* return device size in bytes (u64 *arg) */
+
+#define SPDK_CUSE_GET_TRANSPORT _IOWR('n', 0x1, struct cuse_transport)
 
 int
 main(void)
@@ -87,5 +102,10 @@ main(void)
 	printf("NVME_IOCTL_RESET: 0x%lX | %ld\n", NVME_IOCTL_RESET, NVME_IOCTL_RESET);
 	printf("NVME_IOCTL_SUBSYS_RESET: 0x%lX | %ld\n", NVME_IOCTL_SUBSYS_RESET, NVME_IOCTL_SUBSYS_RESET);
 	printf("NVME_IOCTL_RESCAN: 0x%lX | %ld\n", NVME_IOCTL_RESCAN, NVME_IOCTL_RESCAN);
+	printf("BLKGETSIZE: 0x%lX | %ld\n", BLKGETSIZE, BLKGETSIZE);
+	printf("BLKSSZGET: 0x%lX | %ld\n", BLKSSZGET, BLKSSZGET);
+	printf("BLKPBSZGET: 0x%lX | %ld\n", BLKPBSZGET, BLKPBSZGET);
+	printf("BLKGETSIZE64: 0x%lX | %ld\n", BLKGETSIZE64, BLKGETSIZE64);
+	printf("SPDK_CUSE_GET_TRANSPORT: 0x%lX | %ld\n", SPDK_CUSE_GET_TRANSPORT, SPDK_CUSE_GET_TRANSPORT);
 	return (0);
 }
