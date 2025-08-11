@@ -6,3 +6,6 @@ all:
 	gcc -o pointer_chase_benchmark pointer_chase_benchmark.c -lrt
 	gcc -o parallel_access_benchmark parallel_access_benchmark.c -lrt
 	gcc -o numa_controlled_benchmark numa_controlled_benchmark.c -lnuma -lrt
+	gcc -O2 -o numa_benchmark numa_benchmark.c -lrt -lnuma
+	gcc -O2 -o numa_benchmark_local numa_benchmark_local.c -lrt -lnuma
+	gcc -O2 -o numa_benchmark_remote numa_benchmark_remote.c -lrt -lnuma
